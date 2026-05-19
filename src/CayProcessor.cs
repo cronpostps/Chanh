@@ -40,25 +40,29 @@ namespace Cay
             
             if (ShouldBypassWord(raw, transformed))
             {
-                string finalOutput = raw;
-                
-                // If the word bypassed because a tone or double-key was intentionally undone,
-                // the transformed length will be shorter. We output the stripped version instead of raw.
-                char lastChar = char.ToLower(raw[raw.Length - 1]);
-                bool isUndoKey = CayData.ToneMarks.ContainsKey(lastChar) || 
-                                 lastChar == 'w' || lastChar == 'a' || 
-                                 lastChar == 'e' || lastChar == 'o' || lastChar == 'd';
-
-                if (transformed.Length < raw.Length && isUndoKey)
-                {
-                    finalOutput = transformed;
-                }
-
+                string finalOutput = GetCleanRaw(raw);
                 BypassCurrentWord(finalOutput);
                 return;
             }
 
             UpdateScreen(transformed);
+        }
+
+        private string GetCleanRaw(string raw)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < raw.Length; i++)
+            {
+                if (i < raw.Length - 2 && IsDoubleKeyUndoSequence(raw, i))
+                {
+                    sb.Append(raw[i]);
+                    sb.Append(raw[i + 1]);
+                    i += 2;
+                    continue;
+                }
+                sb.Append(raw[i]);
+            }
+            return sb.ToString();
         }
 
         private string TransformTelex(string input)
@@ -79,7 +83,8 @@ namespace Cay
             {
                 if (i < s.Length - 2 && IsDoubleKeyUndoSequence(s, i))
                 {
-                    sb.Append(GetDoubleKeyBase(s[i]));
+                    sb.Append(s[i]);
+                    sb.Append(s[i + 1]);
                     i += 2;
                     continue;
                 }
