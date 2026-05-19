@@ -37,9 +37,24 @@ namespace Cay
 
             string raw = sb.ToString();
             string transformed = TransformTelex(raw);
+            
             if (ShouldBypassWord(raw, transformed))
             {
-                BypassCurrentWord(raw);
+                string finalOutput = raw;
+                
+                // If the word bypassed because a tone or double-key was intentionally undone,
+                // the transformed length will be shorter. We output the stripped version instead of raw.
+                char lastChar = char.ToLower(raw[raw.Length - 1]);
+                bool isUndoKey = CayData.ToneMarks.ContainsKey(lastChar) || 
+                                 lastChar == 'w' || lastChar == 'a' || 
+                                 lastChar == 'e' || lastChar == 'o' || lastChar == 'd';
+
+                if (transformed.Length < raw.Length && isUndoKey)
+                {
+                    finalOutput = transformed;
+                }
+
+                BypassCurrentWord(finalOutput);
                 return;
             }
 
