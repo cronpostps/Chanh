@@ -15,6 +15,10 @@ namespace Cay
             @"^(?<initial>ngh|ng|nh|ch|gh|gi|kh|ph|qu|th|tr|[bcd\u0111ghklmnpqrstvx])?(?<nucleus>[aeiouy\u0103\u00e2\u00ea\u00f4\u01a1\u01b0]+)(?<final>ng|nh|ch|c|m|n|p|t)?(?<tail>[iouy])?$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+        private static readonly Regex InvalidPrefixRegex = new Regex(
+            @"^(?:[fjwz]|q[^uwy]|c[ieêy]|k[^hieêy]|g[eêy]|gh[^ieêy]|ng[ieêy]|ngh[^ieêy])", 
+            RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
         private void Run(ref KeyEventArgs e, bool isBack)
         {
             if (_buffer.Count == 0)
@@ -145,6 +149,13 @@ namespace Cay
                     sb.Remove(i - 1, 2);
                     sb.Insert(i - 1, secondUpper ? '\u01a0' : '\u01a1');
                     sb.Insert(i - 1, firstUpper ? '\u01af' : '\u01b0');
+                    return true;
+                }
+
+                if (IsChar(sb[i], 'a') && i > 0 && IsChar(sb[i - 1], 'u'))
+                {
+                    bool firstUpper = char.IsUpper(sb[i - 1]);
+                    sb[i - 1] = firstUpper ? '\u01af' : '\u01b0';
                     return true;
                 }
 
@@ -317,7 +328,9 @@ namespace Cay
 
         private bool ShouldBypassWord(string raw, string transformed)
         {
-            if (raw.Length < 4) return false;
+            string normalized = NormalizeForSyllable(transformed);
+            if (InvalidPrefixRegex.IsMatch(normalized)) return true;
+
             if (!HasAnyVowel(raw)) return false;
             if (HasVietnameseMark(transformed)) return false;
             if (IsPotentialVietnamesePrefix(transformed)) return false;
