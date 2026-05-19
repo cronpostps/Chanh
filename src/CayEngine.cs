@@ -117,28 +117,22 @@ namespace Cay
             int backspacesNeeded = _lastOutput.Length - commonPrefixLen;
             string textToType = newOutput.Substring(commonPrefixLen);
 
-            bool shiftWasDown = InputInjector.IsKeyDown(Keys.ShiftKey) || InputInjector.IsKeyDown(Keys.LShiftKey) || InputInjector.IsKeyDown(Keys.RShiftKey);
-            if (shiftWasDown) InputInjector.SendShiftUp();
-
             if (backspacesNeeded > 0)
             {
                 if (_lastOutput.Length > 0)
                 {
-                    // Gửi ký tự dummy để đè lên vùng chọn autocomplete của Excel
+                    // Send dummy char to overwrite Autocomplete selection
                     char dummy = _lastOutput[_lastOutput.Length - 1];
                     InputInjector.SendUnicodeString(dummy.ToString());
-                    // Xóa ký tự dummy + các ký tự cần xóa của từ cũ
+                    // Delete dummy + needed characters
                     InputInjector.SendBackspaces(backspacesNeeded + 1);
                 }
                 InputInjector.SendUnicodeString(textToType);
             }
             else
             {
-                // Chỉ bơm phần thêm vào (forward typing). Tự động đè selection của Autocomplete.
                 InputInjector.SendUnicodeString(textToType);
             }
-
-            if (shiftWasDown) InputInjector.SendShiftDown();
 
             _lastOutput = newOutput;
         }
