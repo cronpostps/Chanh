@@ -33,6 +33,9 @@ Cay hướng tới sự tối giản tối đa trong vận hành:
 ### 🧠 Tự động chuẩn chính tả (Smart Orthography)
 Tự động phân tích cấu trúc nguyên âm tiếng Việt để đặt dấu thanh chuẩn xác theo ngữ pháp. Hỗ trợ tự động dịch chuyển vị trí dấu tương ứng với cấu trúc từ (Ví dụ: `hoas` ➔ `hóa`, nhưng `hoans` ➔ `hoán`).
 
+### ⚡ Tương thích cao (Chrome & Excel)
+Được tối ưu để hoạt động ổn định trên các ứng dụng thường gặp lỗi gõ tiếng Việt, ví dụ như Google Chrome (khắc phục lỗi autocomplete trên thanh địa chỉ gây ra từ dạng "goôgle") và Microsoft Excel.
+
 ### 🔌 Không cần cấu hình (Zero-Config)
 Hoạt động ngay sau khi mở mà không cần thiết lập bảng mã hay phím kích hoạt phức tạp.
 
