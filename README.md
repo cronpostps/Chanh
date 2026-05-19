@@ -5,7 +5,7 @@
 [![Release](https://img.shields.io/github/v/release/tctvn/cay?style=flat-square&color=FF4500)](https://github.com/tctvn/cay/releases)
 [![Size](https://img.shields.io/badge/size-28_KB-brightgreen?style=flat-square)](https://github.com/tctvn/cay/releases/download/cay/Cay.exe)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078d7?style=flat-square)](https://github.com/tctvn/cay/releases)
-[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
 
 ---
 
@@ -103,4 +103,4 @@ src/
 
 ## 📝 Giấy phép
 
-Dự án được phân phối dưới giấy phép **MIT License**. Tự do sử dụng, chỉnh sửa và phân phối.
+Dự án được phân phối dưới giấy phép **GNU General Public License v3.0 (GPL-3.0)**.
