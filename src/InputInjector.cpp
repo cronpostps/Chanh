@@ -42,26 +42,24 @@ static void FillVkInput(INPUT* inp, WORD vk, DWORD flags) {
 void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int newTextLen) {
     if (backspaceCount <= 0 && newTextLen <= 0) return;
 
-    // BATCH 1: DELETION (Pure Backspaces, NO DUMMY)
-    if (backspaceCount > 0) {
-        INPUT bsInputs[130]; 
-        int bsIdx = 0;
-        for (int i = 0; i < backspaceCount && bsIdx + 1 < 130; i++) {
-            FillVkInput(&bsInputs[bsIdx++], VK_BACK, 0);
-            FillVkInput(&bsInputs[bsIdx++], VK_BACK, KEYEVENTF_KEYUP);
-        }
-        SendInput((UINT)bsIdx, bsInputs, sizeof(INPUT));
+    INPUT inputs[256];
+    int idx = 0;
+
+    // 1. Pack Deletions
+    for (int i = 0; i < backspaceCount && idx + 1 < 256; i++) {
+        FillVkInput(&inputs[idx++], VK_BACK, 0);
+        FillVkInput(&inputs[idx++], VK_BACK, KEYEVENTF_KEYUP);
     }
 
-    // BATCH 2: INSERTION (New Text)
-    if (newTextLen > 0) {
-        INPUT txtInputs[130];
-        int txtIdx = 0;
-        for (int i = 0; i < newTextLen && txtIdx + 1 < 130; i++) {
-            FillUnicodeInput(&txtInputs[txtIdx++], newText[i], 0);
-            FillUnicodeInput(&txtInputs[txtIdx++], newText[i], KEYEVENTF_KEYUP);
-        }
-        SendInput((UINT)txtIdx, txtInputs, sizeof(INPUT));
+    // 2. Pack Insertions tightly into the exact same array
+    for (int i = 0; i < newTextLen && idx + 1 < 256; i++) {
+        FillUnicodeInput(&inputs[idx++], newText[i], 0);
+        FillUnicodeInput(&inputs[idx++], newText[i], KEYEVENTF_KEYUP);
+    }
+
+    // 3. ATOMIC INJECTION: Send everything in one uninterruptible OS tick
+    if (idx > 0) {
+        SendInput((UINT)idx, inputs, sizeof(INPUT));
     }
 }
 
