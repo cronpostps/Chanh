@@ -47,12 +47,16 @@ void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int 
     // CRITICAL FIX: The ZWJ dummy occupies one real character in the OS buffer.
     // We must backspace over it in addition to the old text.
     // This dummy wakes up the caret in Chrome Omnibox / Excel autocomplete.
-    int totalBs = backspaceCount + 1;
+    // However, if we don't need to backspace anything (backspaceCount == 0),
+    // we MUST NOT insert a dummy, because some editors (like VS Code) drop ZWJ
+    // which causes the extra backspace to swallow a valid character!
+    bool useDummy = (backspaceCount > 0);
+    int totalBs = backspaceCount + (useDummy ? 1 : 0);
 
     // Total INPUT slots needed.
-    int total = 2               // ZWJ down + up
-              + totalBs * 2     // each BS needs keydown + keyup
-              + newTextLen * 2; // each Unicode char needs keydown + keyup
+    int total = (useDummy ? 2 : 0)  // ZWJ down + up
+              + totalBs * 2         // each BS needs keydown + keyup
+              + newTextLen * 2;     // each Unicode char needs keydown + keyup
 
     if (total > MAX_INPUTS) total = MAX_INPUTS; // hard clamp – should never happen
 
@@ -60,8 +64,10 @@ void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int 
     int idx = 0;
 
     // 1. Zero-Width Joiner dummy to wake up the target window caret.
-    FillUnicodeInput(&inputs[idx++], L'\u200D', 0);               // ZWJ down
-    FillUnicodeInput(&inputs[idx++], L'\u200D', KEYEVENTF_KEYUP); // ZWJ up
+    if (useDummy) {
+        FillUnicodeInput(&inputs[idx++], L'\u200D', 0);               // ZWJ down
+        FillUnicodeInput(&inputs[idx++], L'\u200D', KEYEVENTF_KEYUP); // ZWJ up
+    }
 
     // 2. Backspaces – erase the ZWJ + the old committed text.
     for (int i = 0; i < totalBs && idx + 1 < MAX_INPUTS; i++) {
