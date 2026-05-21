@@ -129,18 +129,17 @@ void TelexEngine::UpdateScreen(const wchar_t* newOutput, int newOutputLen) {
     const wchar_t* textToType = newOutput + commonPrefixLen;
     int textToTypeLen = newOutputLen - commonPrefixLen;
 
-    // 4. Update state BEFORE injecting keystrokes
-    // This ensures if user types rapidly, engine state remains in sync
+    // 4. Inject exact keystrokes
+    if (backspacesNeeded > 0 || textToTypeLen > 0) {
+        CayIME::InputInjector::ReplaceText(backspacesNeeded, textToType, textToTypeLen);
+    }
+
+    // 5. Update state
     for (int i = 0; i < newOutputLen; i++) {
         _lastOutput[i] = newOutput[i];
     }
     _lastOutput[newOutputLen] = L'\0';
     _lastOutputLen = newOutputLen;
-
-    // 5. Inject exact keystrokes
-    if (backspacesNeeded > 0 || textToTypeLen > 0) {
-        CayIME::InputInjector::ReplaceText(backspacesNeeded, textToType, textToTypeLen);
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -343,47 +342,47 @@ bool TelexEngine::ApplyDoubleKeys(wchar_t key) {
             wchar_t newBase = isUpper ? L'A' : L'a';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
-            Commit(0); return true;
+ return true;
         }
         if (loKey == L'e' && loBase == L'\u00ea') {
             wchar_t newBase = isUpper ? L'E' : L'e';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
-            Commit(0); return true;
+ return true;
         }
         if (loKey == L'o' && (loBase == L'\u00f4' || loBase == L'\u01a1')) {
             wchar_t newBase = isUpper ? L'O' : L'o';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
-            Commit(0); return true;
+ return true;
         }
         if (loKey == L'd' && loBase == L'\u0111') {
             wchar_t newBase = isUpper ? L'D' : L'd';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
-            Commit(0); return true;
+ return true;
         }
 
         // 2. Apply logic
         if (loKey == L'a' && loBase == L'a') {
             wchar_t newBase = isUpper ? L'\u00C2' : L'\u00E2';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
-            Commit(0); return true;
+ return true;
         }
         if (loKey == L'e' && loBase == L'e') {
             wchar_t newBase = isUpper ? L'\u00CA' : L'\u00EA';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
-            Commit(0); return true;
+ return true;
         }
         if (loKey == L'o' && loBase == L'o') {
             wchar_t newBase = isUpper ? L'\u00D4' : L'\u00F4';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
-            Commit(0); return true;
+ return true;
         }
         if (loKey == L'd' && loBase == L'd') {
             wchar_t newBase = isUpper ? L'\u0110' : L'\u0111';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
-            Commit(0); return true;
+ return true;
         }
         
         if (!CayData::IsVowel(loBase) && loBase != L'd' && loBase != L'\u0111') {
@@ -430,7 +429,7 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
                 _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             }
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
-            Commit(0); return true;
+ return true;
         }
 
         // 2. Apply logic
@@ -447,7 +446,7 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
             wchar_t newCurrBase = isUpper ? L'\u01A0' : L'\u01a1'; // Ơ/ơ
             _text[j-1] = prevTone ? CayData::GetToneMark(newPrevBase, prevTone) : newPrevBase;
             _text[j]   = tone ? CayData::GetToneMark(newCurrBase, tone) : newCurrBase;
-            Commit(0); return true;
+ return true;
         }
         if (loBase == L'a' && j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'u') {
             wchar_t prevBase = CayData::StripTone(_text[j-1]);
@@ -460,13 +459,13 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
             }
             wchar_t newPrevBase = prevUpper ? L'\u01AF' : L'\u01b0'; // Ư/ư
             _text[j-1] = prevTone ? CayData::GetToneMark(newPrevBase, prevTone) : newPrevBase;
-            Commit(0); return true;
+ return true;
         }
         
         wchar_t hookRule = CayData::GetHookRule(baseTarget);
         if (hookRule != L'\0') {
             _text[j] = tone ? CayData::GetToneMark(hookRule, tone) : hookRule;
-            Commit(0); return true;
+ return true;
         }
         
         if (!CayData::IsVowel(loBase)) {
@@ -510,7 +509,7 @@ bool TelexEngine::ApplyToneMarks(int toneIndex) {
         if (currentTone > 0) {
             _text[tonePos] = CayData::StripTone(_text[tonePos]); // Remove tone
             _toneIndex = -1;
-            Commit(0);
+
             return true; // Consumed 'z', do not append it
         }
         return false; // No tone to remove, return false so 'z' gets appended normally
@@ -520,7 +519,7 @@ bool TelexEngine::ApplyToneMarks(int toneIndex) {
     if (currentTone == toneIndex) {
         _text[tonePos] = CayData::StripTone(_text[tonePos]); // Remove tone
         _toneIndex = -1;
-        Commit(0);
+
         return false; // Return false so the raw tone key (e.g., 's') gets appended
     }
 
@@ -539,7 +538,7 @@ bool TelexEngine::ApplyToneMarks(int toneIndex) {
             // Nâng lên lại IN HOA nếu cần
             _text[targetPos] = isUpper ? ToUpperViet(tonedLo) : tonedLo;
             _toneIndex = toneIndex;
-            Commit(0);
+
             return true;
         }
     }
