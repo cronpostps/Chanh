@@ -558,8 +558,6 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
     switch (vk) {
     case VK_BACK:
         if (_bufferCount == 0 && _canRestore) {
-            e.handled = true;
-            
             // Restore state
             _bufferCount = _savedBufferCount;
             for (int i = 0; i < _bufferCount; i++) _buffer[i] = _savedBuffer[i];
@@ -568,10 +566,14 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
             for (int i = 0; i < _textLen; i++) _text[i] = _savedText[i];
             
             _toneIndex = _savedToneIndex;
+            
+            // Sync output state with restored text (so UpdateScreen works properly on next keystroke)
+            _lastOutputLen = _savedTextLen;
+            for (int i = 0; i < _savedTextLen; i++) _lastOutput[i] = _savedText[i];
+            _lastOutput[_lastOutputLen] = L'\0';
+            
             _canRestore = false;
-
-            // Send 1 backspace to OS to delete the space or punctuation that followed the word
-            CayIME::InputInjector::ReplaceText(1, nullptr, 0);
+            // DO NOT set e.handled = true here. We let the OS physically delete the Space character.
             return;
         }
 
@@ -581,6 +583,7 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
             // Remove last character from our text.
             if (_textLen > 0) _textLen--;
             if (_bufferCount > 0) _bufferCount--;
+            _text[_textLen] = L'\0';
 
             // Re-derive tone index.
             _toneIndex = -1;
@@ -590,11 +593,11 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
             }
 
             if (_bufferCount == 0) {
+                ResetState();
                 // Send one backspace to clear the last remaining displayed char.
                 CayIME::InputInjector::ReplaceText(1, nullptr, 0);
-                ResetState();
             } else {
-                Commit(1); // +1 because we already decremented _textLen
+                UpdateScreen(_text, _textLen); // Automatically calculates and sends 1 Backspace
             }
         }
         return;
@@ -656,42 +659,47 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
     // 5. Try modifier keys (bypass = english mode check).
     // -----------------------------------------------------------------------
     bool bypass = ShouldBypassWord();
+    bool appliedModifier = false;
 
     // 5a. Double-key circumflex / stroke (aa oo ee dd).
     if (!bypass && (lo == L'a' || lo == L'e' || lo == L'o' || lo == L'd')) {
         if (_textLen > 0 && ApplyDoubleKeys(ch)) {
-            e.handled = true;
-            return;
+            appliedModifier = true;
         }
     }
 
     // 5b. Hook key 'w'.
-    if (!bypass && lo == L'w' && _textLen > 0) {
+    if (!bypass && !appliedModifier && lo == L'w' && _textLen > 0) {
         if (ApplyHookKeys(ch)) {
-            e.handled = true;
-            return;
+            appliedModifier = true;
         }
     }
 
     // 5c. Tone mark keys (s f r x j z).
-    if (!bypass) {
+    if (!bypass && !appliedModifier) {
         int ti = CayData::GetToneIndex(lo);
         if (ti >= 0 && _textLen > 0) {
             if (ApplyToneMarks(ti)) {
-                e.handled = true;
-                return;
+                appliedModifier = true;
             }
         }
     }
 
     // -----------------------------------------------------------------------
-    // 6. Plain character – append to text buffer and inject.
+    // 6. Plain character – append to text buffer.
     // -----------------------------------------------------------------------
-    _text[_textLen++] = ch;
-    _text[_textLen]   = L'\0';
+    if (!appliedModifier) {
+        if (_textLen < MAX_BUFFER - 1) {
+            _text[_textLen++] = ch;
+            _text[_textLen]   = L'\0';
+        }
+    }
 
+    // -----------------------------------------------------------------------
+    // 7. Sync screen (Centralized Rendering)
+    // -----------------------------------------------------------------------
     e.handled = true;
-    CayIME::InputInjector::SendChar(ch);
+    UpdateScreen(_text, _textLen);
 }
 
 // ---------------------------------------------------------------------------
