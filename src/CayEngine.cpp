@@ -31,7 +31,8 @@ bool TelexEngine::IsAlpha(wchar_t ch) {
 wchar_t TelexEngine::ToLowerViet(wchar_t c) {
     if (c >= L'A' && c <= L'Z') return c + 32;
     if (c >= 0x00C0 && c <= 0x00DD && c != 0x00D7) return c + 0x20; // Latin-1
-    if (c >= 0x0102 && c <= 0x01AF && (c % 2 == 0)) return c + 1;   // Ă, Đ, Ĩ, Ũ, Ơ, Ư
+    if (c == 0x01AF) return 0x01B0; // Ư -> ư
+    if (c >= 0x0102 && c <= 0x01A0 && (c % 2 == 0)) return c + 1;   // Ă, Đ, Ĩ, Ũ, Ơ
     if (c >= 0x1EA0 && c <= 0x1EF8 && (c % 2 == 0)) return c + 1;   // Ạ..Ỹ (Latin Extended Additional)
     return c;
 }
@@ -39,7 +40,8 @@ wchar_t TelexEngine::ToLowerViet(wchar_t c) {
 wchar_t TelexEngine::ToUpperViet(wchar_t c) {
     if (c >= L'a' && c <= L'z') return c - 32;
     if (c >= 0x00E0 && c <= 0x00FD && c != 0x00F7) return c - 0x20;
-    if (c >= 0x0103 && c <= 0x01B0 && (c % 2 != 0)) return c - 1;
+    if (c == 0x01B0) return 0x01AF; // ư -> Ư
+    if (c >= 0x0103 && c <= 0x01A1 && (c % 2 != 0)) return c - 1;
     if (c >= 0x1EA1 && c <= 0x1EF9 && (c % 2 != 0)) return c - 1;
     return c;
 }
