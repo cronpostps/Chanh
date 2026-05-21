@@ -129,17 +129,18 @@ void TelexEngine::UpdateScreen(const wchar_t* newOutput, int newOutputLen) {
     const wchar_t* textToType = newOutput + commonPrefixLen;
     int textToTypeLen = newOutputLen - commonPrefixLen;
 
-    // 4. Inject exact keystrokes
-    if (backspacesNeeded > 0 || textToTypeLen > 0) {
-        CayIME::InputInjector::ReplaceText(backspacesNeeded, textToType, textToTypeLen);
-    }
-
-    // 5. Update state
+    // 4. Update state BEFORE injecting keystrokes
+    // This ensures if user types rapidly, engine state remains in sync
     for (int i = 0; i < newOutputLen; i++) {
         _lastOutput[i] = newOutput[i];
     }
     _lastOutput[newOutputLen] = L'\0';
     _lastOutputLen = newOutputLen;
+
+    // 5. Inject exact keystrokes
+    if (backspacesNeeded > 0 || textToTypeLen > 0) {
+        CayIME::InputInjector::ReplaceText(backspacesNeeded, textToType, textToTypeLen);
+    }
 }
 
 // ---------------------------------------------------------------------------

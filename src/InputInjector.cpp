@@ -40,33 +40,52 @@ static void FillVkInput(INPUT* inp, WORD vk, DWORD flags) {
 //   remaining       newText unicode pairs
 // ---------------------------------------------------------------------------
 void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int newTextLen) {
-    // Guard against impossible sizes.
-    if (backspaceCount < 0) backspaceCount = 0;
-    if (newTextLen      < 0) newTextLen      = 0;
-
-    int totalBs = backspaceCount;
-
-    // Total INPUT slots needed.
-    int total = totalBs * 2     // each BS needs keydown + keyup
-              + newTextLen * 2; // each Unicode char needs keydown + keyup
-
-    if (total > MAX_INPUTS) total = MAX_INPUTS; // hard clamp – should never happen
+    // 1. Calculate buffer size: (backspaces * 2) + (newText * 2)
+    int totalEvents = (backspaceCount * 2) + (newTextLen * 2);
+    if (totalEvents > MAX_INPUTS) return; // Safety check
 
     INPUT inputs[MAX_INPUTS];
     int idx = 0;
 
-    // 1. Backspaces – erase the old committed text.
-    for (int i = 0; i < totalBs && idx + 1 < MAX_INPUTS; i++) {
-        FillVkInput(&inputs[idx++], VK_BACK, 0);
-        FillVkInput(&inputs[idx++], VK_BACK, KEYEVENTF_KEYUP);
+    // 2. Batch: Send Backspaces
+    for (int i = 0; i < backspaceCount; i++) {
+        inputs[idx].type = INPUT_KEYBOARD;
+        inputs[idx].ki.wVk = VK_BACK;
+        inputs[idx].ki.wScan = 0;
+        inputs[idx].ki.dwFlags = 0; // Down
+        inputs[idx].ki.time = 0;
+        inputs[idx].ki.dwExtraInfo = MAGIC_EXTRA_INFO;
+        idx++;
+
+        inputs[idx].type = INPUT_KEYBOARD;
+        inputs[idx].ki.wVk = VK_BACK;
+        inputs[idx].ki.wScan = 0;
+        inputs[idx].ki.dwFlags = KEYEVENTF_KEYUP;
+        inputs[idx].ki.time = 0;
+        inputs[idx].ki.dwExtraInfo = MAGIC_EXTRA_INFO;
+        idx++;
     }
 
-    // 2. New text Unicode injection.
-    for (int i = 0; i < newTextLen && idx + 1 < MAX_INPUTS; i++) {
-        FillUnicodeInput(&inputs[idx++], newText[i], 0);
-        FillUnicodeInput(&inputs[idx++], newText[i], KEYEVENTF_KEYUP);
+    // 3. Batch: Send New Text (Unicode)
+    for (int i = 0; i < newTextLen; i++) {
+        inputs[idx].type = INPUT_KEYBOARD;
+        inputs[idx].ki.wVk = 0;
+        inputs[idx].ki.wScan = newText[i];
+        inputs[idx].ki.dwFlags = KEYEVENTF_UNICODE;
+        inputs[idx].ki.time = 0;
+        inputs[idx].ki.dwExtraInfo = MAGIC_EXTRA_INFO;
+        idx++;
+
+        inputs[idx].type = INPUT_KEYBOARD;
+        inputs[idx].ki.wVk = 0;
+        inputs[idx].ki.wScan = newText[i];
+        inputs[idx].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+        inputs[idx].ki.time = 0;
+        inputs[idx].ki.dwExtraInfo = MAGIC_EXTRA_INFO;
+        idx++;
     }
 
+    // 4. Send the entire batch at once
     SendInput((UINT)idx, inputs, sizeof(INPUT));
 }
 

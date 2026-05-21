@@ -54,6 +54,10 @@ LRESULT CALLBACK InputHookManager::KbProc(int nCode, WPARAM wParam, LPARAM lPara
     }
 
     KBDLLHOOKSTRUCT* kb = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+    if (kb->dwExtraInfo == InputInjector::MAGIC_EXTRA_INFO) {
+        return CallNextHookEx(nullptr, nCode, wParam, lParam);
+    }
+
     DWORD vk = kb->vkCode;
 
     // Translate VK to a Unicode character (best-effort, single char).
