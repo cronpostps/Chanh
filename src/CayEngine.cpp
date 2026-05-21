@@ -59,6 +59,8 @@ void TelexEngine::ResetState() {
     _bufferCount = 0;
     _textLen     = 0;
     _toneIndex   = -1;
+    _lastOutputLen = 0;
+    _lastOutput[0] = L'\0';
     for (int i = 0; i < MAX_BUFFER; i++) {
         _buffer[i].raw    = 0;
         _buffer[i].output = 0;
@@ -98,13 +100,53 @@ void TelexEngine::CommitWord() {
     ResetState();
 }
 
+void TelexEngine::UpdateScreen(const wchar_t* newOutput, int newOutputLen) {
+    // 1. Check if identical
+    bool isIdentical = (_lastOutputLen == newOutputLen);
+    if (isIdentical) {
+        for (int i = 0; i < newOutputLen; i++) {
+            if (_lastOutput[i] != newOutput[i]) {
+                isIdentical = false;
+                break;
+            }
+        }
+    }
+    if (isIdentical) return;
+
+    // 2. Find common prefix
+    int commonPrefixLen = 0;
+    int minLen = _lastOutputLen < newOutputLen ? _lastOutputLen : newOutputLen;
+    for (int i = 0; i < minLen; i++) {
+        if (_lastOutput[i] == newOutput[i]) {
+            commonPrefixLen++;
+        } else {
+            break;
+        }
+    }
+
+    // 3. Calculate exact diff without any dummy padding
+    int backspacesNeeded = _lastOutputLen - commonPrefixLen;
+    const wchar_t* textToType = newOutput + commonPrefixLen;
+    int textToTypeLen = newOutputLen - commonPrefixLen;
+
+    // 4. Inject exact keystrokes
+    if (backspacesNeeded > 0 || textToTypeLen > 0) {
+        CayIME::InputInjector::ReplaceText(backspacesNeeded, textToType, textToTypeLen);
+    }
+
+    // 5. Update state
+    for (int i = 0; i < newOutputLen; i++) {
+        _lastOutput[i] = newOutput[i];
+    }
+    _lastOutput[newOutputLen] = L'\0';
+    _lastOutputLen = newOutputLen;
+}
+
 // ---------------------------------------------------------------------------
 // Commit – replace the currently displayed word with _text[0.._textLen).
 // ---------------------------------------------------------------------------
 void TelexEngine::Commit(int extraBs) {
-    int bs = _textLen + extraBs;
-    if (bs < 0) bs = 0;
-    CayIME::InputInjector::ReplaceText(bs, _text, _textLen);
+    UpdateScreen(_text, _textLen);
 }
 
 // ---------------------------------------------------------------------------

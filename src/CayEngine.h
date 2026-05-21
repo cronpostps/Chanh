@@ -54,6 +54,10 @@ private:
     // Current tone index (0–5) applied to this word, or -1 if none.
     int  _toneIndex;
 
+    // Output tracking for precise screen updates (exact diff calculation)
+    wchar_t _lastOutput[MAX_BUFFER];
+    int     _lastOutputLen;
+
     // Word recall state
     MyKey   _savedBuffer[MAX_BUFFER];
     int     _savedBufferCount;
@@ -87,8 +91,10 @@ private:
     // candidate for receiving a tone mark (Vietnamese tone placement rule).
     int FindTonePosition() const;
 
+    // Update screen efficiently by calculating exact backspaces
+    void UpdateScreen(const wchar_t* newOutput, int newOutputLen);
+
     // Commit the current word: inject _text[] to replace what the user sees.
-    // `extraBs` = additional backspaces beyond _textLen (for undo situations).
     void Commit(int extraBs = 0);
 
     // Revert to ASCII raw input (English fallback).
