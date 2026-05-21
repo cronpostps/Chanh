@@ -361,7 +361,7 @@ bool TelexEngine::ApplyDoubleKeys(wchar_t key) {
             // Also catch toned variant of the circumflex (e.g. â + sắc = ấ)
             CayData::StripAccent(CayData::StripTone(tc)) == target) {
             // Revert to plain.
-            _text[i] = (wchar_t)target;
+            _text[i] = (tc >= L'A' && tc <= L'Z') ? (wchar_t)(target - 0x20) : (wchar_t)target;
             // Re-apply current tone if any.
             if (_toneIndex >= 0) {
                 wchar_t toned = CayData::GetToneMark(_text[i], _toneIndex);
@@ -369,7 +369,7 @@ bool TelexEngine::ApplyDoubleKeys(wchar_t key) {
             }
             // Append the literal key as a new character.
             if (_textLen < MAX_BUFFER - 1) {
-                _text[_textLen++] = lo;
+                _text[_textLen++] = key;
             }
             Commit(0);
             return true;
@@ -412,14 +412,14 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
             wchar_t prevB = CayData::StripTone(prev);
             wchar_t prevA = CayData::StripAccent(prevB);
 
-            if (prevA == L'u') {
+            if (prevA == L'u' || prevA == L'U') {
                 // Check undo: if 'u' is already ư and 'o' is already ơ -> revert.
-                bool alreadyHooked = (prevB == L'\u01B0' || CayData::StripTone(prev) == L'\u01B0') &&
-                                     (tcB   == L'\u01A1' || CayData::StripTone(tc)   == L'\u01A1');
+                bool alreadyHooked = (ToLowerViet(prevB) == L'\u01B0') &&
+                                     (ToLowerViet(tcB)   == L'\u01A1');
                 if (alreadyHooked) {
                     // Undo: revert both to plain.
-                    _text[i - 1] = prevA; // u
-                    _text[i]     = tcA;   // o
+                    _text[i - 1] = (prev >= L'A' && prev <= L'Z') ? L'U' : L'u';
+                    _text[i]     = (tc >= L'A' && tc <= L'Z') ? L'O' : L'o';
                     // Re-apply tone if any.
                     if (_toneIndex >= 0) {
                         int tp = FindTonePosition();
@@ -428,15 +428,15 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
                             if (toned) _text[tp] = toned;
                         }
                     }
-                    // Append literal 'w'.
-                    if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = L'w';
+                    // Append literal key.
+                    if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = key;
                     Commit(0);
                     return true;
                 }
 
                 // Apply: u -> ư, o -> ơ.
-                _text[i - 1] = L'\u01B0'; // ư
-                _text[i]     = L'\u01A1'; // ơ
+                _text[i - 1] = (prev >= L'A' && prev <= L'Z') ? L'\u01AF' : L'\u01B0'; // Ư / ư
+                _text[i]     = (tc >= L'A' && tc <= L'Z') ? L'\u01A0' : L'\u01A1'; // Ơ / ơ
                 // Re-apply tone.
                 if (_toneIndex >= 0) {
                     int tp = FindTonePosition();
@@ -458,13 +458,13 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
             wchar_t prev  = _text[i - 1];
             wchar_t prevStripTone = CayData::StripTone(prev);
             wchar_t prevA = CayData::StripAccent(prevStripTone);
-            if (prevA == L'u') {
-                // Undo: if 'u' is already ư (U+01B0) -> revert to 'u', append literal 'w'.
-                bool alreadyHooked = (prevStripTone == L'\u01B0');
+            if (prevA == L'u' || prevA == L'U') {
+                // Undo: if 'u' is already ư (U+01B0) -> revert to 'u', append literal key.
+                bool alreadyHooked = (ToLowerViet(prevStripTone) == L'\u01B0');
                 if (alreadyHooked) {
                     _text[i - 1] = (prev >= L'A' && prev <= L'Z') ? L'U' : L'u';
                     // 'a' stays as 'a' (no change needed)
-                    if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = L'w';
+                    if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = key;
                     Commit(0);
                     return true;
                 }
@@ -496,8 +496,11 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
 
         switch (plain) {
         case L'a': hooked = L'\u0103'; break; // ă
+        case L'A': hooked = L'\u0102'; break; // Ă
         case L'o': hooked = L'\u01A1'; break; // ơ
+        case L'O': hooked = L'\u01A0'; break; // Ơ
         case L'u': hooked = L'\u01B0'; break; // ư
+        case L'U': hooked = L'\u01AF'; break; // Ư
         default:   break;
         }
 
@@ -513,7 +516,7 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
                 wchar_t toned = CayData::GetToneMark(_text[i], _toneIndex);
                 if (toned) _text[i] = toned;
             }
-            if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = L'w';
+            if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = key;
             Commit(0);
             return true;
         }
