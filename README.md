@@ -1,4 +1,4 @@
-# 🌶️ Cay — Zero-CRT Native C++ Vietnamese IME
+# 🌶️ Cay — Bộ Gõ Telex cho người hướng nội 😁
 
 [![Release](https://img.shields.io/github/v/release/tctvn/cay?style=flat-square&color=FF4500)](https://github.com/tctvn/cay/releases)
 [![Size](https://img.shields.io/badge/size-22_KB-brightgreen?style=flat-square)](https://github.com/tctvn/cay/releases/download/cay/cay.exe)
