@@ -44,14 +44,10 @@ void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int 
     if (backspaceCount < 0) backspaceCount = 0;
     if (newTextLen      < 0) newTextLen      = 0;
 
-    // CRITICAL FIX: The ZWJ dummy occupies one real character in the OS buffer.
-    // We must backspace over it in addition to the old text, otherwise it leaks
-    // into the document and causes duplication (e.g. "nnn").
-    int totalBs = backspaceCount + 1; // +1 for the ZWJ that follows
+    int totalBs = backspaceCount;
 
     // Total INPUT slots needed.
-    int total = 2                // ZWJ down + up
-              + totalBs * 2     // each BS needs keydown + keyup
+    int total = totalBs * 2     // each BS needs keydown + keyup
               + newTextLen * 2; // each Unicode char needs keydown + keyup
 
     if (total > MAX_INPUTS) total = MAX_INPUTS; // hard clamp – should never happen
@@ -59,17 +55,13 @@ void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int 
     INPUT inputs[MAX_INPUTS];
     int idx = 0;
 
-    // 1. Zero-Width Joiner dummy to wake up the target window caret.
-    FillUnicodeInput(&inputs[idx++], L'\u200D', 0);               // ZWJ down
-    FillUnicodeInput(&inputs[idx++], L'\u200D', KEYEVENTF_KEYUP); // ZWJ up
-
-    // 2. Backspaces – erase the ZWJ + the old committed text.
+    // 1. Backspaces – erase the old committed text.
     for (int i = 0; i < totalBs && idx + 1 < MAX_INPUTS; i++) {
         FillVkInput(&inputs[idx++], VK_BACK, 0);
         FillVkInput(&inputs[idx++], VK_BACK, KEYEVENTF_KEYUP);
     }
 
-    // 3. New text Unicode injection.
+    // 2. New text Unicode injection.
     for (int i = 0; i < newTextLen && idx + 1 < MAX_INPUTS; i++) {
         FillUnicodeInput(&inputs[idx++], newText[i], 0);
         FillUnicodeInput(&inputs[idx++], newText[i], KEYEVENTF_KEYUP);

@@ -57,6 +57,9 @@ public:
 
     // Return true if `ch` is any form of a Vietnamese vowel (plain or accented).
     static bool IsVowel(wchar_t ch);
+
+    // Get hook rule for a vowel
+    static wchar_t GetHookRule(wchar_t c);
 };
 
 } // namespace Cay

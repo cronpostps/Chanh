@@ -278,259 +278,158 @@ void TelexEngine::StripAllTones() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// ApplyDoubleKeys
-//
-// Handles aa->â, ee->ê, oo->ô, dd->đ.
-//
-// RULE 3 backward-scan logic:
-//   When the user types a vowel key (a/e/o) or 'd':
-//     Scan _text[] backward for the nearest plain matching ASCII character.
-//     If found and it is still plain -> transform it (circumflex / stroke).
-//     If found and it is already circumflexed -> UNDO: revert to plain and
-//       append a literal copy of the key (toggle behaviour).
-//     If not found -> append plain character (handled by the caller).
-//
-// Returns true if the key was consumed as a modifier; false to fall through.
-// ---------------------------------------------------------------------------
 bool TelexEngine::ApplyDoubleKeys(wchar_t key) {
-    wchar_t lo = ToLowerViet(key);
+    wchar_t loKey = ToLowerViet(key);
+    if (loKey != L'a' && loKey != L'e' && loKey != L'o' && loKey != L'd') return false;
 
-    // Which plain target character does this key double-up on?
-    wchar_t target = 0;
-    wchar_t replacement = 0;
-    wchar_t already = 0; // the already-transformed character (for undo detection)
+    for (int j = _textLen - 1; j >= 0; j--) {
+        wchar_t target = _text[j];
+        wchar_t baseTarget = CayData::StripTone(target);
+        wchar_t loBase = ToLowerViet(baseTarget);
+        bool isUpper = (ToLowerViet(target) != target) || (target >= L'A' && target <= L'Z');
 
-    switch (lo) {
-    case L'a':
-        target      = L'a';
-        replacement = L'\u00E2'; // â
-        already     = L'\u00E2';
-        break;
-    case L'e':
-        target      = L'e';
-        replacement = L'\u00EA'; // ê
-        already     = L'\u00EA';
-        break;
-    case L'o':
-        target      = L'o';
-        replacement = L'\u00F4'; // ô
-        already     = L'\u00F4';
-        break;
-    case L'd':
-        target      = L'd';
-        replacement = L'\u0111'; // đ
-        already     = L'\u0111';
-        break;
-    default:
-        return false; // Not a double-key candidate.
-    }
-
-    // Scan backward through _text[] for the target.
-    for (int i = _textLen - 1; i >= 0; i--) {
-        wchar_t tc = _text[i];
-        wchar_t tcLo = ToLowerViet(tc);
-
-        // Case A: found a plain target – transform it.
-        if (tcLo == target) {
-            // Preserve case.
-            wchar_t r = (tc >= L'A' && tc <= L'Z') ?
-                        (wchar_t)(replacement - 0x20) : // uppercase variant (may not exist, falls back)
-                        replacement;
-            // Vietnamese uppercase circumflex: Â Ê Ô Đ
-            if (tc >= L'A' && tc <= L'Z') {
-                switch (replacement) {
-                case L'\u00E2': r = L'\u00C2'; break; // Â
-                case L'\u00EA': r = L'\u00CA'; break; // Ê
-                case L'\u00F4': r = L'\u00D4'; break; // Ô
-                case L'\u0111': r = L'\u0110'; break; // Đ
-                }
+        int tone = 0;
+        for (int t = 1; t <= 5; t++) {
+            if (CayData::GetToneMark(baseTarget, t) == target || CayData::GetToneMark(ToLowerViet(baseTarget), t) == ToLowerViet(target)) {
+                tone = t; break;
             }
-            _text[i] = r;
-            // If a tone was active, re-apply it at the new position.
-            if (_toneIndex >= 0) {
-                wchar_t toned = CayData::GetToneMark(_text[i], _toneIndex);
-                if (toned) _text[i] = toned;
-            }
-            Commit(0);
-            return true;
         }
 
-        // Case B: found the already-transformed character – UNDO.
-        if (tc == already ||
-            // Also catch toned variant of the circumflex (e.g. â + sắc = ấ)
-            CayData::StripAccent(CayData::StripTone(tc)) == target) {
-            // Revert to plain.
-            _text[i] = (tc >= L'A' && tc <= L'Z') ? (wchar_t)(target - 0x20) : (wchar_t)target;
-            // Re-apply current tone if any.
-            if (_toneIndex >= 0) {
-                wchar_t toned = CayData::GetToneMark(_text[i], _toneIndex);
-                if (toned) _text[i] = toned;
-            }
-            // Append the literal key as a new character.
-            if (_textLen < MAX_BUFFER - 1) {
-                _text[_textLen++] = key;
-            }
-            Commit(0);
-            return true;
+        // 1. Undo logic
+        if (loKey == L'a' && (loBase == L'\u00e2' || loBase == L'\u0103')) {
+            wchar_t newBase = isUpper ? L'A' : L'a';
+            _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
+            if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
+            Commit(0); return true;
+        }
+        if (loKey == L'e' && loBase == L'\u00ea') {
+            wchar_t newBase = isUpper ? L'E' : L'e';
+            _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
+            if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
+            Commit(0); return true;
+        }
+        if (loKey == L'o' && (loBase == L'\u00f4' || loBase == L'\u01a1')) {
+            wchar_t newBase = isUpper ? L'O' : L'o';
+            _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
+            if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
+            Commit(0); return true;
+        }
+        if (loKey == L'd' && loBase == L'\u0111') {
+            wchar_t newBase = isUpper ? L'D' : L'd';
+            _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
+            if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
+            Commit(0); return true;
         }
 
-        // Non-vowel consonant – stop scanning (don't cross consonant boundaries).
-        if (!CayData::IsVowel(tcLo) && tcLo != L'd' && tcLo != L'\u0111') {
+        // 2. Apply logic
+        if (loKey == L'a' && loBase == L'a') {
+            wchar_t newBase = isUpper ? L'\u00C2' : L'\u00E2';
+            _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
+            Commit(0); return true;
+        }
+        if (loKey == L'e' && loBase == L'e') {
+            wchar_t newBase = isUpper ? L'\u00CA' : L'\u00EA';
+            _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
+            Commit(0); return true;
+        }
+        if (loKey == L'o' && loBase == L'o') {
+            wchar_t newBase = isUpper ? L'\u00D4' : L'\u00F4';
+            _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
+            Commit(0); return true;
+        }
+        if (loKey == L'd' && loBase == L'd') {
+            wchar_t newBase = isUpper ? L'\u0110' : L'\u0111';
+            _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
+            Commit(0); return true;
+        }
+        
+        if (!CayData::IsVowel(loBase) && loBase != L'd' && loBase != L'\u0111') {
             break;
         }
     }
-
     return false;
 }
 
-// ---------------------------------------------------------------------------
-// ApplyHookKeys
-//
-// Handles the 'w' hook key:
-//   ow (in context of uo) -> ươ  (both o and preceding u get hooks)
-//   aw (in context of ua) -> ưă  (u -> ư, a stays but gets breve via aw->ă)
-//   a -> ă,  o -> ơ,  u -> ư
-//
-// RULE 3: backward-scan with full undo support.
-// ---------------------------------------------------------------------------
 bool TelexEngine::ApplyHookKeys(wchar_t key) {
     if (ToLowerViet(key) != L'w') return false;
 
-    // Scan backward for the first vowel.
-    for (int i = _textLen - 1; i >= 0; i--) {
-        wchar_t tc  = _text[i];
-        wchar_t tcB = CayData::StripTone(tc); // base without tone
-        wchar_t tcA = CayData::StripAccent(tcB); // plain ASCII
+    for (int j = _textLen - 1; j >= 0; j--) {
+        wchar_t target = _text[j];
+        wchar_t baseTarget = CayData::StripTone(target);
+        wchar_t loBase = ToLowerViet(baseTarget);
+        bool isUpper = (ToLowerViet(target) != target) || (target >= L'A' && target <= L'Z');
 
-        // ----------------------------------------------------------------
-        // Special case: 'o' preceded by 'u' -> hook BOTH (uo -> ươ)
-        // This is the "truowng" -> "trương" rule.
-        // ----------------------------------------------------------------
-        if ((tcA == L'o') && i > 0) {
-            wchar_t prev  = _text[i - 1];
-            wchar_t prevB = CayData::StripTone(prev);
-            wchar_t prevA = CayData::StripAccent(prevB);
-
-            if (prevA == L'u' || prevA == L'U') {
-                // Check undo: if 'u' is already ư and 'o' is already ơ -> revert.
-                bool alreadyHooked = (ToLowerViet(prevB) == L'\u01B0') &&
-                                     (ToLowerViet(tcB)   == L'\u01A1');
-                if (alreadyHooked) {
-                    // Undo: revert both to plain.
-                    _text[i - 1] = (prev >= L'A' && prev <= L'Z') ? L'U' : L'u';
-                    _text[i]     = (tc >= L'A' && tc <= L'Z') ? L'O' : L'o';
-                    // Re-apply tone if any.
-                    if (_toneIndex >= 0) {
-                        int tp = FindTonePosition();
-                        if (tp >= 0) {
-                            wchar_t toned = CayData::GetToneMark(_text[tp], _toneIndex);
-                            if (toned) _text[tp] = toned;
-                        }
-                    }
-                    // Append literal key.
-                    if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = key;
-                    Commit(0);
-                    return true;
-                }
-
-                // Apply: u -> ư, o -> ơ.
-                _text[i - 1] = (prev >= L'A' && prev <= L'Z') ? L'\u01AF' : L'\u01B0'; // Ư / ư
-                _text[i]     = (tc >= L'A' && tc <= L'Z') ? L'\u01A0' : L'\u01A1'; // Ơ / ơ
-                // Re-apply tone.
-                if (_toneIndex >= 0) {
-                    int tp = FindTonePosition();
-                    if (tp >= 0) {
-                        wchar_t toned = CayData::GetToneMark(_text[tp], _toneIndex);
-                        if (toned) _text[tp] = toned;
-                    }
-                }
-                Commit(0);
-                return true;
+        int tone = 0;
+        for (int t = 1; t <= 5; t++) {
+            if (CayData::GetToneMark(baseTarget, t) == target || CayData::GetToneMark(ToLowerViet(baseTarget), t) == ToLowerViet(target)) {
+                tone = t; break;
             }
         }
 
-        // ----------------------------------------------------------------
-        // Special case: 'a' preceded by 'u' -> hook 'u' only (ua+w = ưa)
-        // CRITICAL: 'a' must NOT be changed to 'ă'. Only 'u' -> 'ư'.
-        // ----------------------------------------------------------------
-        if ((tcA == L'a') && i > 0) {
-            wchar_t prev  = _text[i - 1];
-            wchar_t prevStripTone = CayData::StripTone(prev);
-            wchar_t prevA = CayData::StripAccent(prevStripTone);
-            if (prevA == L'u' || prevA == L'U') {
-                // Undo: if 'u' is already ư (U+01B0) -> revert to 'u', append literal key.
-                bool alreadyHooked = (ToLowerViet(prevStripTone) == L'\u01B0');
-                if (alreadyHooked) {
-                    _text[i - 1] = (prev >= L'A' && prev <= L'Z') ? L'U' : L'u';
-                    // 'a' stays as 'a' (no change needed)
-                    if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = key;
-                    Commit(0);
-                    return true;
-                }
-                // Apply: only hook 'u' -> 'ư'. Keep 'a' unchanged (ua+w = ưa, NOT ưă).
-                _text[i - 1] = (prev >= L'A' && prev <= L'Z') ? L'\u01AF' : L'\u01B0'; // ư
-                // _text[i] ('a') is intentionally NOT changed.
-                if (_toneIndex >= 0) {
-                    int tp = FindTonePosition();
-                    if (tp >= 0) {
-                        wchar_t toned = CayData::GetToneMark(_text[tp], _toneIndex);
-                        if (toned) _text[tp] = toned;
+        // 1. Undo logic
+        if (loBase == L'\u0103' || loBase == L'\u01a1' || loBase == L'\u01b0') {
+            if (loBase == L'\u01a1' && j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'\u01b0') {
+                wchar_t prevBase = CayData::StripTone(_text[j-1]);
+                bool prevUpper = (ToLowerViet(prevBase) != prevBase) || (prevBase >= L'A' && prevBase <= L'Z');
+                int prevTone = 0;
+                for (int t = 1; t <= 5; t++) {
+                    if (CayData::GetToneMark(prevBase, t) == _text[j-1] || CayData::GetToneMark(ToLowerViet(prevBase), t) == ToLowerViet(_text[j-1])) {
+                        prevTone = t; break;
                     }
                 }
-                Commit(0);
-                return true;
+                wchar_t newPrevBase = prevUpper ? L'U' : L'u';
+                wchar_t newCurrBase = isUpper ? L'O' : L'o';
+                _text[j-1] = prevTone ? CayData::GetToneMark(newPrevBase, prevTone) : newPrevBase;
+                _text[j]   = tone ? CayData::GetToneMark(newCurrBase, tone) : newCurrBase;
+            } else {
+                wchar_t newBase = (loBase == L'\u0103') ? (isUpper ? L'A' : L'a') :
+                                  (loBase == L'\u01a1') ? (isUpper ? L'O' : L'o') : (isUpper ? L'U' : L'u');
+                _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             }
+            if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
+            Commit(0); return true;
         }
 
-        // ----------------------------------------------------------------
-        // General single-vowel hook.
-        // ----------------------------------------------------------------
-        if (!CayData::IsVowel(tc)) {
-            // Not a vowel, keep scanning.
+        // 2. Apply logic
+        if (loBase == L'o' && j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'u') {
+            wchar_t prevBase = CayData::StripTone(_text[j-1]);
+            bool prevUpper = (ToLowerViet(prevBase) != prevBase) || (prevBase >= L'A' && prevBase <= L'Z');
+            int prevTone = 0;
+            for (int t = 1; t <= 5; t++) {
+                if (CayData::GetToneMark(prevBase, t) == _text[j-1] || CayData::GetToneMark(ToLowerViet(prevBase), t) == ToLowerViet(_text[j-1])) {
+                    prevTone = t; break;
+                }
+            }
+            wchar_t newPrevBase = prevUpper ? L'\u01AF' : L'\u01b0'; // Ư/ư
+            wchar_t newCurrBase = isUpper ? L'\u01A0' : L'\u01a1'; // Ơ/ơ
+            _text[j-1] = prevTone ? CayData::GetToneMark(newPrevBase, prevTone) : newPrevBase;
+            _text[j]   = tone ? CayData::GetToneMark(newCurrBase, tone) : newCurrBase;
+            Commit(0); return true;
+        }
+        if (loBase == L'a' && j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'u') {
+            wchar_t prevBase = CayData::StripTone(_text[j-1]);
+            bool prevUpper = (ToLowerViet(prevBase) != prevBase) || (prevBase >= L'A' && prevBase <= L'Z');
+            int prevTone = 0;
+            for (int t = 1; t <= 5; t++) {
+                if (CayData::GetToneMark(prevBase, t) == _text[j-1] || CayData::GetToneMark(ToLowerViet(prevBase), t) == ToLowerViet(_text[j-1])) {
+                    prevTone = t; break;
+                }
+            }
+            wchar_t newPrevBase = prevUpper ? L'\u01AF' : L'\u01b0'; // Ư/ư
+            _text[j-1] = prevTone ? CayData::GetToneMark(newPrevBase, prevTone) : newPrevBase;
+            Commit(0); return true;
+        }
+        
+        wchar_t hookRule = CayData::GetHookRule(baseTarget);
+        if (hookRule != L'\0') {
+            _text[j] = tone ? CayData::GetToneMark(hookRule, tone) : hookRule;
+            Commit(0); return true;
+        }
+        
+        if (!CayData::IsVowel(loBase)) {
             continue;
         }
-
-        wchar_t hooked = 0;
-        wchar_t plain  = tcA;
-
-        switch (plain) {
-        case L'a': hooked = L'\u0103'; break; // ă
-        case L'A': hooked = L'\u0102'; break; // Ă
-        case L'o': hooked = L'\u01A1'; break; // ơ
-        case L'O': hooked = L'\u01A0'; break; // Ơ
-        case L'u': hooked = L'\u01B0'; break; // ư
-        case L'U': hooked = L'\u01AF'; break; // Ư
-        default:   break;
-        }
-
-        if (!hooked) {
-            // This vowel can't take a hook – keep scanning.
-            continue;
-        }
-
-        // Undo: if already hooked, revert and append 'w'.
-        if (tcB == hooked) {
-            _text[i] = plain;
-            if (_toneIndex >= 0) {
-                wchar_t toned = CayData::GetToneMark(_text[i], _toneIndex);
-                if (toned) _text[i] = toned;
-            }
-            if (_textLen < MAX_BUFFER - 1) _text[_textLen++] = key;
-            Commit(0);
-            return true;
-        }
-
-        // Apply hook.
-        _text[i] = hooked;
-        if (_toneIndex >= 0) {
-            wchar_t toned = CayData::GetToneMark(_text[i], _toneIndex);
-            if (toned) _text[i] = toned;
-        }
-        Commit(0);
-        return true;
     }
-
     return false;
 }
 

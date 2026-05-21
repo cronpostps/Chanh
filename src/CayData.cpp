@@ -211,6 +211,20 @@ wchar_t CayData::GetToneMark(wchar_t base, int toneIndex) {
     }
 }
 
+wchar_t CayData::GetHookRule(wchar_t c) {
+    switch (c) {
+        case L'a': return L'\u0103'; // ă
+        case L'o': return L'\u01a1'; // ơ
+        case L'u': return L'\u01b0'; // ư
+        case L'A': return L'\u0102'; // Ă
+        case L'O': return L'\u01A0'; // Ơ
+        case L'U': return L'\u01AF'; // Ư
+        case L'\u00e2': return L'\u0103'; // â -> ă
+        case L'\u00C2': return L'\u0102'; // Â -> Ă
+        default: return L'\0';
+    }
+}
+
 // ---------------------------------------------------------------------------
 // HasVietnameseMark (single character)
 // ---------------------------------------------------------------------------
