@@ -41,6 +41,9 @@ public:
     // Hard reset: flush buffer and discard all state.
     void ResetFull();
 
+    // Commit current word: save state for recall, then reset.
+    void CommitWord();
+
 private:
     MyKey _buffer[MAX_BUFFER];
     int   _bufferCount;
@@ -50,6 +53,16 @@ private:
 
     // Current tone index (0–5) applied to this word, or -1 if none.
     int  _toneIndex;
+
+    // Word recall state
+    MyKey   _savedBuffer[MAX_BUFFER];
+    int     _savedBufferCount;
+    wchar_t _savedText[MAX_BUFFER];
+    int     _savedTextLen;
+    int     _savedToneIndex;
+    bool    _canRestore;
+
+    void SaveState();
 
     // -----------------------------------------------------------------------
     // Core transformation steps – all mutate _text[] in place.

@@ -48,6 +48,7 @@ wchar_t TelexEngine::ToUpperViet(wchar_t c) {
 // Constructor
 // ---------------------------------------------------------------------------
 TelexEngine::TelexEngine() {
+    _canRestore = false;
     ResetState();
 }
 
@@ -66,10 +67,34 @@ void TelexEngine::ResetState() {
 }
 
 // ---------------------------------------------------------------------------
-// ResetFull – discard buffer and do NOT inject anything (caller is responsible
-// for handling the commit if needed before calling this).
+// ResetFull – discard buffer and invalidate recall state.
 // ---------------------------------------------------------------------------
 void TelexEngine::ResetFull() {
+    ResetState();
+    _canRestore = false;
+}
+
+// ---------------------------------------------------------------------------
+// SaveState – cache the current word state for recall.
+// ---------------------------------------------------------------------------
+void TelexEngine::SaveState() {
+    if (_bufferCount > 0) {
+        _savedBufferCount = _bufferCount;
+        for (int i = 0; i < _bufferCount; i++) _savedBuffer[i] = _buffer[i];
+        
+        _savedTextLen = _textLen;
+        for (int i = 0; i < _textLen; i++) _savedText[i] = _text[i];
+        
+        _savedToneIndex = _toneIndex;
+        _canRestore = true;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CommitWord – save state for recall, then reset.
+// ---------------------------------------------------------------------------
+void TelexEngine::CommitWord() {
+    SaveState();
     ResetState();
 }
 
@@ -101,6 +126,7 @@ void TelexEngine::FallbackToRaw() {
     for (int i = 0; i < rawLen; i++) _text[i] = raw[i];
     _textLen = rawLen;
     _toneIndex = -1;
+    _canRestore = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -587,8 +613,27 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
     // -----------------------------------------------------------------------
     switch (vk) {
     case VK_BACK:
+        if (_bufferCount == 0 && _canRestore) {
+            e.handled = true;
+            
+            // Restore state
+            _bufferCount = _savedBufferCount;
+            for (int i = 0; i < _bufferCount; i++) _buffer[i] = _savedBuffer[i];
+            
+            _textLen = _savedTextLen;
+            for (int i = 0; i < _textLen; i++) _text[i] = _savedText[i];
+            
+            _toneIndex = _savedToneIndex;
+            _canRestore = false;
+
+            // Send 1 backspace to OS to delete the space or punctuation that followed the word
+            CayIME::InputInjector::ReplaceText(1, nullptr, 0);
+            return;
+        }
+
         if (_bufferCount > 0) {
             e.handled = true; // suppress the raw backspace
+            _canRestore = false;
             // Remove last character from our text.
             if (_textLen > 0) _textLen--;
             if (_bufferCount > 0) _bufferCount--;
@@ -611,14 +656,14 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
         return;
 
     case VK_ESCAPE:
-    case VK_RETURN:
-    case VK_TAB:
         ResetFull();
         return;
 
+    case VK_RETURN:
+    case VK_TAB:
     case VK_SPACE:
-        // Space finalises the current word.
-        ResetFull();
+        if (_bufferCount > 0) CommitWord();
+        else ResetFull();
         return;
 
     case VK_LEFT: case VK_RIGHT: case VK_UP: case VK_DOWN:
@@ -633,7 +678,8 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
     // -----------------------------------------------------------------------
     if (vk < 'A' || vk > 'Z') {
         // Non-alpha printable (digits, punctuation) – commit word.
-        if (_bufferCount > 0) ResetFull();
+        if (_bufferCount > 0) CommitWord();
+        else ResetFull();
         return;
     }
 
@@ -656,6 +702,8 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
     // -----------------------------------------------------------------------
     // 4. Record raw keystroke.
     // -----------------------------------------------------------------------
+    if (_bufferCount == 0) _canRestore = false;
+
     _buffer[_bufferCount].raw    = ch;
     _buffer[_bufferCount].output = ch; // will be updated after transformation
     _bufferCount++;

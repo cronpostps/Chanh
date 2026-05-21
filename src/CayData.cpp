@@ -13,7 +13,7 @@ namespace Cay {
 // All 26 recognised Vietnamese initial consonant clusters (Telex form).
 // ---------------------------------------------------------------------------
 static const wchar_t* const s_initials[] = {
-    L"b",  L"c",  L"ch", L"d",  L"dd", L"g",  L"gh", L"gi",
+    L"b",  L"c",  L"ch", L"d",  L"dd", L"\u0111", L"g",  L"gh", L"gi",
     L"h",  L"k",  L"kh", L"l",  L"m",  L"n",  L"ng", L"ngh",
     L"nh", L"p",  L"ph", L"qu", L"r",  L"s",  L"t",  L"th",
     L"tr", L"v",  L"x"
@@ -215,40 +215,10 @@ wchar_t CayData::GetToneMark(wchar_t base, int toneIndex) {
 // HasVietnameseMark (single character)
 // ---------------------------------------------------------------------------
 bool CayData::HasVietnameseMark(wchar_t ch) {
-    // Any codepoint above 0x00C0 that is a vowel derivative counts.
     if (ch < 0x00C0) return false;
-    switch (ch) {
-    // â ã à á ạ ả
-    case L'\u00E0': case L'\u00E1': case L'\u00E2': case L'\u00E3':
-    case L'\u1EA1': case L'\u1EA3':
-    // ă and its tones
-    case L'\u0103': case L'\u1EB1': case L'\u1EAF': case L'\u1EB3': case L'\u1EB5': case L'\u1EB7':
-    // â tones  ầ ấ ẩ ẫ ậ
-    case L'\u1EA7': case L'\u1EA5': case L'\u1EA9': case L'\u1EAB': case L'\u1EAD':
-    // è é ẽ ẻ ẹ ê and ê tones
-    case L'\u00E8': case L'\u00E9': case L'\u00EA':
-    case L'\u1EBB': case L'\u1EBD': case L'\u1EB9':
-    case L'\u1EC1': case L'\u1EBF': case L'\u1EC3': case L'\u1EC5': case L'\u1EC7':
-    // ì í ĩ ỉ ị
-    case L'\u00EC': case L'\u00ED': case L'\u1EC9': case L'\u0129': case L'\u1ECB':
-    // ò ó õ ỏ ọ ô and ô tones
-    case L'\u00F2': case L'\u00F3': case L'\u00F4': case L'\u00F5':
-    case L'\u1ECF': case L'\u1ECD':
-    case L'\u1ED3': case L'\u1ED1': case L'\u1ED5': case L'\u1ED7': case L'\u1ED9':
-    // ơ and ơ tones
-    case L'\u01A1':
-    case L'\u1EDD': case L'\u1EDB': case L'\u1EDF': case L'\u1EE1': case L'\u1EE3':
-    // ù ú ũ ủ ụ ư and ư tones
-    case L'\u00F9': case L'\u00FA': case L'\u01B0': case L'\u0169':
-    case L'\u1EE7': case L'\u1EE5':
-    case L'\u1EEB': case L'\u1EE9': case L'\u1EED': case L'\u1EEF': case L'\u1EF1':
-    // ỳ ý ỷ ỹ ỵ đ
-    case L'\u1EF3': case L'\u00FD': case L'\u1EF7': case L'\u1EF9': case L'\u1EF5':
-    case L'\u0111': // đ
-        return true;
-    default:
-        return false;
-    }
+    // If stripping tone and accent changes the character, it has a mark.
+    wchar_t base = StripAccent(StripTone(ch));
+    return base != ch;
 }
 
 // ---------------------------------------------------------------------------
@@ -300,18 +270,30 @@ wchar_t CayData::StripTone(wchar_t ch) {
 wchar_t CayData::StripAccent(wchar_t ch) {
     switch (ch) {
     case L'\u00E2': case L'\u0103': return L'a'; // â ă -> a
+    case L'\u00C2': case L'\u0102': return L'A'; // Â Ă -> A
     case L'\u00EA':                 return L'e'; // ê   -> e
+    case L'\u00CA':                 return L'E'; // Ê   -> E
     case L'\u00F4':                 return L'o'; // ô   -> o
+    case L'\u00D4':                 return L'O'; // Ô   -> O
     case L'\u01A1':                 return L'o'; // ơ   -> o
+    case L'\u01A0':                 return L'O'; // Ơ   -> O
     case L'\u01B0':                 return L'u'; // ư   -> u
+    case L'\u01AF':                 return L'U'; // Ư   -> U
     case L'\u0111':                 return L'd'; // đ   -> d
+    case L'\u0110':                 return L'D'; // Đ   -> D
     // Also strip from toned hooked vowels (strip both marks in one step).
-    case L'\u1EA7': case L'\u1EA5': case L'\u1EAB': case L'\u1EAD': case L'\u1EAF': return L'a'; // â±tone
-    case L'\u1EB1': case L'\u1EB3': case L'\u1EB5': case L'\u1EB7': return L'a'; // ă±tone
+    case L'\u1EA7': case L'\u1EA5': case L'\u1EAB': case L'\u1EAD': case L'\u1EAF': return L'a';
+    case L'\u1EA6': case L'\u1EA4': case L'\u1EAA': case L'\u1EAC': case L'\u1EAE': return L'A';
+    case L'\u1EB1': case L'\u1EB3': case L'\u1EB5': case L'\u1EB7': return L'a';
+    case L'\u1EB0': case L'\u1EB2': case L'\u1EB4': case L'\u1EB6': return L'A';
     case L'\u1EC1': case L'\u1EBF': case L'\u1EC3': case L'\u1EC5': case L'\u1EC7': return L'e';
+    case L'\u1EC0': case L'\u1EBE': case L'\u1EC2': case L'\u1EC4': case L'\u1EC6': return L'E';
     case L'\u1ED3': case L'\u1ED1': case L'\u1ED5': case L'\u1ED7': case L'\u1ED9': return L'o';
+    case L'\u1ED2': case L'\u1ED0': case L'\u1ED4': case L'\u1ED6': case L'\u1ED8': return L'O';
     case L'\u1EDD': case L'\u1EDB': case L'\u1EDF': case L'\u1EE1': case L'\u1EE3': return L'o';
+    case L'\u1EDC': case L'\u1EDA': case L'\u1EDE': case L'\u1EE0': case L'\u1EE2': return L'O';
     case L'\u1EEB': case L'\u1EE9': case L'\u1EED': case L'\u1EEF': case L'\u1EF1': return L'u';
+    case L'\u1EEA': case L'\u1EE8': case L'\u1EEC': case L'\u1EEE': case L'\u1EF0': return L'U';
     default: return ch;
     }
 }
@@ -320,15 +302,17 @@ wchar_t CayData::StripAccent(wchar_t ch) {
 // IsVowel – true for any plain or accented Vietnamese vowel.
 // ---------------------------------------------------------------------------
 bool CayData::IsVowel(wchar_t ch) {
-    switch (ch) {
-    case L'a': case L'e': case L'i': case L'o': case L'u': case L'y':
-    case L'\u00E2': case L'\u0103':              // â ă
-    case L'\u00EA':                              // ê
-    case L'\u00F4': case L'\u01A1':              // ô ơ
-    case L'\u01B0':                              // ư
+    wchar_t base = StripAccent(StripTone(ch));
+    switch (base) {
+    case L'a': case L'A':
+    case L'e': case L'E':
+    case L'i': case L'I':
+    case L'o': case L'O':
+    case L'u': case L'U':
+    case L'y': case L'Y':
         return true;
     default:
-        return HasVietnameseMark(ch); // catches toned vowels
+        return false;
     }
 }
 
