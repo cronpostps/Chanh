@@ -47,10 +47,15 @@ void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int 
 
     // 1. ZWJ DUMMY INJECTION (Chrome/Excel Autocomplete Breaker)
     // We only inject the dummy if we are actually replacing text (backspaceCount > 0).
+    // 1. Dummy character to wake up the target window caret.
+    // ZWJ (\u200D) and ZWSP (\u200B) are dropped by strict editors like GitHub/CodeMirror.
+    // To be 100% bulletproof across all editors, we use a standard printable letter ('a').
+    // Since it's inserted and immediately backspaced within the same OS event batch,
+    // it never flashes on screen and safely clears any autocomplete selection.
     bool useDummy = (backspaceCount > 0);
     if (useDummy) {
-        FillUnicodeInput(&inputs[idx++], L'\u200D', 0);
-        FillUnicodeInput(&inputs[idx++], L'\u200D', KEYEVENTF_KEYUP);
+        FillUnicodeInput(&inputs[idx++], L'a', 0);               // Dummy down
+        FillUnicodeInput(&inputs[idx++], L'a', KEYEVENTF_KEYUP); // Dummy up
     }
 
     // 2. DELETION (Erase the dummy + the original characters)
