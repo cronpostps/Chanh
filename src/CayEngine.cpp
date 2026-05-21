@@ -250,6 +250,14 @@ static bool IsCompleteSyllable(const wchar_t* s, int len) {
             break;
         }
     }
+
+    // Special case for "gi": if the remaining part does NOT start with a vowel
+    // (e.g. "gì", "gìn", "gíp"), it means 'i' is actually the nucleus.
+    if (matchedInitial && matchedInitial[0] == L'g' && matchedInitial[1] == L'i' && matchedInitial[2] == L'\0') {
+        if (pos == end || !CayData::IsVowel(CayData::StripTone(*pos))) {
+            pos--; // Roll back 1 character so 'i' becomes the nucleus
+        }
+    }
     if (!matchedInitial) return false;
 
     // ── BLOCK 2: Khớp nhân nguyên âm (bắt buộc) ───────────────
