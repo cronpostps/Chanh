@@ -1,6 +1,6 @@
 # 🌶️ Cay — Bộ gõ tiếng Việt Native siêu nhẹ
 
-> Bộ gõ Telex tối giản dành cho Windows, được viết lại hoàn toàn bằng C++ Native (Zero-CRT). Kích thước siêu nhỏ (~18KB), tốc độ phản hồi tính bằng micro-giây, không cần cài đặt.
+> Bộ gõ Telex tối giản dành cho Windows, được viết lại hoàn toàn bằng C++ Native (Zero-CRT). Kích thước siêu nhỏ (~19KB), tốc độ phản hồi tính bằng micro-giây, không cần cài đặt.
 
 [![Release](https://img.shields.io/github/v/release/tctvn/cay?style=flat-square&color=FF4500)](https://github.com/tctvn/cay/releases)
 [![Size](https://img.shields.io/badge/size-18_KB-brightgreen?style=flat-square)](https://github.com/tctvn/cay/releases/download/cay/cay.exe)
@@ -11,7 +11,7 @@
 
 Cay là bộ gõ tiếng Việt tối giản được thiết kế nhằm thay thế các bộ gõ cồng kềnh. Ở phiên bản mới nhất, Cay được viết lại hoàn toàn bằng C++ Native (bỏ qua C-Runtime), tối ưu dung lượng xuống mức cực hạn (~18KB) và tiêu thụ RAM gần như bằng 0.
 
-➡️ [**Tải về cay.exe (18 KB)**](https://github.com/tctvn/cay/releases/download/cay/cay.exe)
+➡️ [**Tải về cay.exe (19 KB)**](https://github.com/tctvn/cay/releases/download/cay/cay.exe)
 
 > [!IMPORTANT]
 > **Yêu cầu hệ thống:** Windows 10 / 11 (64-bit). Khởi chạy trực tiếp không cần framework đi kèm.
@@ -22,7 +22,7 @@ Cay là bộ gõ tiếng Việt tối giản được thiết kế nhằm thay t
 
 Cay hướng tới sự tối giản tối đa trong vận hành:
 
-- **Siêu nhẹ, siêu tốc độ (18 KB):** Không chứa C-Runtime, thư viện động hay STL. Code thuần API Win32 giúp bộ gõ phản hồi nhanh nhất có thể.
+- **Siêu nhẹ, siêu tốc độ (189 KB):** Không chứa C-Runtime, thư viện động hay STL. Code thuần API Win32 giúp bộ gõ phản hồi nhanh nhất có thể.
 - **Không cài đặt:** 1 file thực thi duy nhất `cay.exe`. Tải về và chạy.
 - **Không tiến trình ngầm dư thừa:** Dịch vụ chạy ngầm được tối ưu bằng bitwise logic, không sử dụng string processing cồng kềnh.
 
