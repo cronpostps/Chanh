@@ -1,20 +1,20 @@
-# 🌶️ Cay — Bộ gõ tiếng Việt siêu nhỏ gọn
+# 🌶️ Cay — Bộ gõ tiếng Việt Native siêu nhẹ
 
-> Bộ gõ Telex tối giản dành cho Windows. Không cài đặt, không giao diện thừa, tập trung 100% vào tốc độ và trải nghiệm gõ.
+> Bộ gõ Telex tối giản dành cho Windows, được viết lại hoàn toàn bằng C++ Native (Zero-CRT). Kích thước siêu nhỏ (~18KB), tốc độ phản hồi tính bằng micro-giây, không cần cài đặt.
 
 [![Release](https://img.shields.io/github/v/release/tctvn/cay?style=flat-square&color=FF4500)](https://github.com/tctvn/cay/releases)
-[![Size](https://img.shields.io/badge/size-28_KB-brightgreen?style=flat-square)](https://github.com/tctvn/cay/releases/download/cay/Cay.exe)
+[![Size](https://img.shields.io/badge/size-18_KB-brightgreen?style=flat-square)](https://github.com/tctvn/cay/releases/download/cay/cay.exe)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078d7?style=flat-square)](https://github.com/tctvn/cay/releases)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
 
 ---
 
-Cay là bộ gõ tiếng Việt tối giản được thiết kế nhằm thay thế các bộ gõ cồng kềnh. Tập trung hoàn toàn vào sự tinh gọn, Cay chỉ hỗ trợ kiểu gõ Telex và hoạt động độc lập không cần cấu hình.
+Cay là bộ gõ tiếng Việt tối giản được thiết kế nhằm thay thế các bộ gõ cồng kềnh. Ở phiên bản mới nhất, Cay được viết lại hoàn toàn bằng C++ Native (bỏ qua C-Runtime), tối ưu dung lượng xuống mức cực hạn (~18KB) và tiêu thụ RAM gần như bằng 0.
 
-➡️ [**Tải về Cay.exe (28 KB)**](https://github.com/tctvn/cay/releases/download/cay/Cay.exe)
+➡️ [**Tải về cay.exe (18 KB)**](https://github.com/tctvn/cay/releases/download/cay/cay.exe)
 
 > [!IMPORTANT]
-> **Yêu cầu hệ thống:** Windows 10 / 11 (64-bit). Đã tích hợp sẵn .NET Framework 4.8. (Đối với Windows 7 / 8, cần cài đặt thủ công .NET Framework 4.8).
+> **Yêu cầu hệ thống:** Windows 10 / 11 (64-bit). Khởi chạy trực tiếp không cần framework đi kèm.
 
 ---
 
@@ -22,28 +22,25 @@ Cay là bộ gõ tiếng Việt tối giản được thiết kế nhằm thay t
 
 Cay hướng tới sự tối giản tối đa trong vận hành:
 
-- **Kích thước siêu nhỏ (28 KB):** Tải và chạy tức thì, sử dụng rất ít tài nguyên hệ thống.
-- **Không cài đặt:** 1 file thực thi duy nhất, không tạo file rác, không ghi đè Registry. Gỡ bỏ hoàn toàn bằng cách xóa file.
-- **Không tiến trình ngầm:** Không có dịch vụ chạy ẩn hoặc cập nhật ngầm làm chậm máy.
+- **Siêu nhẹ, siêu tốc độ (18 KB):** Không chứa C-Runtime, thư viện động hay STL. Code thuần API Win32 giúp bộ gõ phản hồi nhanh nhất có thể.
+- **Không cài đặt:** 1 file thực thi duy nhất `cay.exe`. Tải về và chạy.
+- **Không tiến trình ngầm dư thừa:** Dịch vụ chạy ngầm được tối ưu bằng bitwise logic, không sử dụng string processing cồng kềnh.
 
 ---
 
 ## 🚀 Tính năng chính
 
-### 🧠 Tự động chuẩn chính tả (Smart Orthography)
-Tự động phân tích cấu trúc nguyên âm tiếng Việt để đặt dấu thanh chuẩn xác theo ngữ pháp. Hỗ trợ tự động dịch chuyển vị trí dấu tương ứng với cấu trúc từ (Ví dụ: `hoas` ➔ `hóa`, nhưng `hoans` ➔ `hoán`).
+### 🧠 Xử lý dấu thông minh (Smart Tone Placement)
+Tự động phân tích cấu trúc nguyên âm tiếng Việt (kể cả với các từ đang gõ dở) để đặt dấu thanh chuẩn xác theo ngữ pháp (Ví dụ: `nguyeenx` ➔ `nguyễn`, `hoas` ➔ `hóa`).
 
-### ⚡ Tương thích cao (Chrome & Excel)
-Được tối ưu để hoạt động ổn định trên các ứng dụng thường gặp lỗi gõ tiếng Việt, ví dụ như Google Chrome (khắc phục lỗi autocomplete trên thanh địa chỉ gây ra từ dạng "goôgle") và Microsoft Excel.
+### ⚡ Early Rejection Bypass (Level 1 & 2)
+Thuật toán loại trừ (bypass) cực nhanh ngay tại thời điểm gõ (Level 1 & 2). Tự động nhận diện từ tiếng Anh và các tổ hợp phụ âm/nguyên âm sai quy tắc tiếng Việt để nhường quyền gõ phím, không làm hỏng từ tiếng Anh.
 
 ### 🔌 Không cần cấu hình (Zero-Config)
 Hoạt động ngay sau khi mở mà không cần thiết lập bảng mã hay phím kích hoạt phức tạp.
 
-### 🌐 Tự động nhận diện ngữ cảnh (Context-Aware)
-Tự động nhận diện và tạm ngưng bộ gõ khi người dùng viết code, viết tiếng Anh hoặc sử dụng phím tắt, giúp hạn chế việc phải chuyển chế độ thủ công.
-
-### 🤫 Hoạt động ẩn
-Không có giao diện người dùng (UI) hay thông báo pop-up gây phân tâm. Lần đầu khởi chạy sẽ hỏi quyền tự động bật cùng Windows, sau đó hoạt động hoàn toàn ở chế độ nền.
+### 🤫 Hoạt động ẩn dưới System Tray
+Không có giao diện UI phức tạp. Nằm gọn dưới khay hệ thống (System Tray). Tích hợp menu bật tắt khởi động cùng Windows.
 
 ---
 
@@ -71,32 +68,22 @@ Hỗ trợ kiểu gõ Telex chuẩn:
 | **`j`** | Nặng | `nawjng` | **nặng** |
 | **`z`** | Xóa dấu | `hoasz` | **hoa** |
 
-### Ví dụ thực tế
-
-| Phím gõ | Kết quả hiển thị | Ghi chú |
-| :--- | :--- | :--- |
-| `xin chaof` | **xin chào** | Xử lý dấu huyền |
-| `truwowngf` | **trường** | Xử lý nguyên âm đôi & dấu |
-| `nguwowif` | **người** | Xử lý nguyên âm ba & dấu |
-| `ddaats` | **đất** | Xử lý phụ âm ghép và dấu sắc |
-| `word` | **word** | Tự động nhận diện từ tiếng Anh |
-
 *💡 Mẹo: Nhấn tổ hợp phím `Ctrl + Shift` bất kỳ lúc nào để bật hoặc tắt nhanh bộ gõ.*
 
 ---
 
-## 🛠️ Kiến trúc hệ thống
+## 🛠️ Kiến trúc mã nguồn (C++ Native)
 
-Cấu trúc thư mục mã nguồn dành cho nhà phát triển:
+Kiến trúc No-CRT với các file thành phần:
 
 ```text
 src/
-├── Program.cs             # Điểm khởi chạy, System Tray, Đăng ký phím tắt bật/tắt nhanh (Ctrl+Shift)
-├── CayEngine.cs           # Lõi xử lý chính: Quản lý bộ đệm (Buffer), theo dõi trạng thái gõ phím
-├── CayProcessor.cs        # Bộ phân tích Telex: Ghép vần, xử lý bỏ dấu, kiểm tra ngữ pháp tiếng Việt
-├── CayData.cs             # Cơ sở dữ liệu tĩnh: Định nghĩa bảng mã Telex & quy tắc chính tả
-├── KeyboardHookManager.cs # Low-level Keyboard Hook: Đánh chặn sự kiện bàn phím cấp thấp của Windows
-└── InputInjector.cs       # Giả lập nhập liệu: Gửi phím Backspace và chèn ký tự tiếng Việt mới
+├── main.cpp                 # Điểm khởi chạy (wWinMain), System Tray & Registry.
+├── CayEngine.h/cpp          # State machine lõi (Xử lý Telex, ghép vần, logic bỏ dấu).
+├── CayData.h/cpp            # Cơ sở dữ liệu tĩnh (Bảng mã Unicode, quy tắc chính tả).
+├── KeyboardHookManager.h/cpp# Windows Hook (WH_KEYBOARD_LL) đánh chặn phím cấp thấp.
+├── InputInjector.h/cpp      # Giả lập nhập liệu, xử lý SendInput (Xóa dummy ZWJ, chèn từ).
+└── no_crt.cpp               # Triển khai các intrinsic functions (memset, memcpy) thay thế CRT.
 ```
 
 ---
