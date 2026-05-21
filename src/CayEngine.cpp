@@ -193,19 +193,19 @@ static bool IsCompleteSyllable(const wchar_t* s, int len) {
     static const wchar_t* s_nuclei[] = {
         // 3 nguyên âm
         L"iêu", L"yêu", L"\u01b0\u01a1u", L"uôi", L"ươi", L"oai", L"oay",
-        L"uya", L"uyê",
+        L"uya", L"uyê", L"ieu", L"yeu", L"uoi", L"uou", L"oao", L"oeo", L"uyu", L"uye",
         // 2 nguyên âm
         L"ai", L"ao", L"au", L"ay",
         L"\u00e2u", L"\u00e2y",
         L"eo", L"\u00eau",
-        L"ia", L"i\u00ea",
+        L"ia", L"i\u00ea", L"ie",
         L"iu",
-        L"oa", L"oai", L"o\u0103", L"oe", L"oi",
+        L"oa", L"oai", L"o\u0103", L"oe", L"oi", L"oo",
         L"\u00f4i",
         L"\u01a1i",
-        L"ua", L"u\u00e2", L"u\u00ea", L"ui", L"u\u00f4", L"uy",
+        L"ua", L"u\u00e2", L"u\u00ea", L"ui", L"u\u00f4", L"uy", L"uo", L"ue",
         L"\u01b0a", L"\u01b0i", L"\u01b0u", L"\u01b0\u01a1",
-        L"ya", L"y\u00ea",
+        L"ya", L"y\u00ea", L"ye",
         // 1 nguyên âm
         L"a", L"\u0103", L"\u00e2",
         L"e", L"\u00ea",
