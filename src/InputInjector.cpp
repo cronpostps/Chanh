@@ -45,19 +45,28 @@ void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int 
     INPUT inputs[256];
     int idx = 0;
 
-    // 1. Pack Deletions
-    for (int i = 0; i < backspaceCount && idx + 1 < 256; i++) {
+    // 1. ZWJ DUMMY INJECTION (Chrome/Excel Autocomplete Breaker)
+    // We only inject the dummy if we are actually replacing text (backspaceCount > 0).
+    bool useDummy = (backspaceCount > 0);
+    if (useDummy) {
+        FillUnicodeInput(&inputs[idx++], L'\u200D', 0);
+        FillUnicodeInput(&inputs[idx++], L'\u200D', KEYEVENTF_KEYUP);
+    }
+
+    // 2. DELETION (Erase the dummy + the original characters)
+    int totalBs = backspaceCount + (useDummy ? 1 : 0);
+    for (int i = 0; i < totalBs && idx + 1 < 256; i++) {
         FillVkInput(&inputs[idx++], VK_BACK, 0);
         FillVkInput(&inputs[idx++], VK_BACK, KEYEVENTF_KEYUP);
     }
 
-    // 2. Pack Insertions tightly into the exact same array
+    // 3. INSERTION (New Text)
     for (int i = 0; i < newTextLen && idx + 1 < 256; i++) {
         FillUnicodeInput(&inputs[idx++], newText[i], 0);
         FillUnicodeInput(&inputs[idx++], newText[i], KEYEVENTF_KEYUP);
     }
 
-    // 3. ATOMIC INJECTION: Send everything in one uninterruptible OS tick
+    // 4. PURE ATOMIC INJECTION (Send everything in 1 tick)
     if (idx > 0) {
         SendInput((UINT)idx, inputs, sizeof(INPUT));
     }
