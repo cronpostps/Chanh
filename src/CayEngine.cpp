@@ -174,13 +174,125 @@ void TelexEngine::FallbackToRaw() {
 }
 
 // ---------------------------------------------------------------------------
+// LEVEL 2: Structural Validator — Pointer Walk Syllable Check
+// ---------------------------------------------------------------------------
+static bool IsCompleteSyllable(const wchar_t* s, int len) {
+    if (len == 0 || len > 20) return false;
+
+    // Bảng phụ âm đầu, sắp xếp: dài trước để tránh match ngắn hơn
+    static const wchar_t* s_initials[] = {
+        L"ngh", L"gh", L"gi", L"ng", L"nh", L"ph",
+        L"qu", L"th", L"tr", L"ch", L"kh", L"đ",
+        L"b", L"c", L"d", L"g", L"h", L"k",
+        L"l", L"m", L"n", L"p", L"r", L"s",
+        L"t", L"v", L"x",
+        L"" // empty string = không có phụ âm đầu
+    };
+
+    // Bảng nhân nguyên âm hợp lệ, dài trước
+    static const wchar_t* s_nuclei[] = {
+        // 3 nguyên âm
+        L"iêu", L"yêu", L"\u01b0\u01a1u", L"uôi", L"ươi", L"oai", L"oay",
+        L"uya", L"uyê",
+        // 2 nguyên âm
+        L"ai", L"ao", L"au", L"ay",
+        L"\u00e2u", L"\u00e2y",
+        L"eo", L"\u00eau",
+        L"ia", L"i\u00ea",
+        L"iu",
+        L"oa", L"oai", L"o\u0103", L"oe", L"oi",
+        L"\u00f4i",
+        L"\u01a1i",
+        L"ua", L"u\u00e2", L"u\u00ea", L"ui", L"u\u00f4", L"uy",
+        L"\u01b0a", L"\u01b0i", L"\u01b0u", L"\u01b0\u01a1",
+        L"ya", L"y\u00ea",
+        // 1 nguyên âm
+        L"a", L"\u0103", L"\u00e2",
+        L"e", L"\u00ea",
+        L"i",
+        L"o", L"\u00f4", L"\u01a1",
+        L"u", L"\u01b0",
+        L"y",
+    };
+
+    // Bảng phụ âm cuối hợp lệ, dài trước
+    static const wchar_t* s_finals[] = {
+        L"ng", L"nh", L"ch",
+        L"c", L"m", L"n", L"p", L"t",
+        L""  // không có phụ âm cuối
+    };
+
+    // Bảng vần phụ (tail)
+    static const wchar_t* s_tails[] = {
+        L"i", L"y", L"o", L"u",
+        L""
+    };
+
+    const wchar_t* pos = s;
+    const wchar_t* end = s + len;
+
+    auto matchStr = [&](const wchar_t* pattern, int plen) -> bool {
+        if (pos + plen > end) return false;
+        for (int i = 0; i < plen; i++) {
+            if (pos[i] != pattern[i]) return false;
+        }
+        return true;
+    };
+
+    // ── BLOCK 1: Khớp phụ âm đầu ──────────────────────────────
+    const wchar_t* matchedInitial = nullptr;
+    for (int i = 0; i < (int)(sizeof(s_initials)/sizeof(s_initials[0])); i++) {
+        int ilen = lstrlenW(s_initials[i]);
+        if (ilen == 0) { matchedInitial = L""; break; }
+        if (matchStr(s_initials[i], ilen)) {
+            pos += ilen;
+            matchedInitial = s_initials[i];
+            break;
+        }
+    }
+    if (!matchedInitial) return false;
+
+    // ── BLOCK 2: Khớp nhân nguyên âm (bắt buộc) ───────────────
+    const wchar_t* matchedNucleus = nullptr;
+    for (int i = 0; i < (int)(sizeof(s_nuclei)/sizeof(s_nuclei[0])); i++) {
+        int nlen = lstrlenW(s_nuclei[i]);
+        if (matchStr(s_nuclei[i], nlen)) {
+            pos += nlen;
+            matchedNucleus = s_nuclei[i];
+            break;
+        }
+    }
+    if (!matchedNucleus) return false;
+
+    // ── BLOCK 3: Khớp phụ âm cuối (tùy chọn) ─────────────────
+    for (int i = 0; i < (int)(sizeof(s_finals)/sizeof(s_finals[0])); i++) {
+        int flen = lstrlenW(s_finals[i]);
+        if (flen == 0) break;
+        if (matchStr(s_finals[i], flen)) {
+            pos += flen;
+            break;
+        }
+    }
+
+    // ── BLOCK 4: Khớp tail (tùy chọn) ────────────────────────
+    for (int i = 0; i < (int)(sizeof(s_tails)/sizeof(s_tails[0])); i++) {
+        int tlen = lstrlenW(s_tails[i]);
+        if (tlen == 0) break;
+        if (matchStr(s_tails[i], tlen)) {
+            pos += tlen;
+            break;
+        }
+    }
+
+    // ── KIỂM TRA KẾT THÚC ──
+    return (pos == end);
+}
+
+// ---------------------------------------------------------------------------
 // ShouldBypassWord
 //
 // Returns true if the current typed sequence looks English and should bypass
 // Vietnamese transformation.
-//
-// RULE 3 requirement: MUST start with HasVietnameseMark check to protect
-// already-accented valid words.
 // ---------------------------------------------------------------------------
 bool TelexEngine::ShouldBypassWord() const {
     if (CayData::HasVietnameseMark(_text, _textLen)) return false;
@@ -193,45 +305,42 @@ bool TelexEngine::ShouldBypassWord() const {
         raw[i] = ToLowerViet(_buffer[i].raw);
     }
 
-    // LEVEL 1: Bắt đầu bằng w, f, j, z -> Bỏ qua ngay
+    // LEVEL 1: Hard Filter — Invalid initial clusters
     if (raw[0] == L'w' || raw[0] == L'f' || raw[0] == L'j' || raw[0] == L'z') return true;
 
-    // LEVEL 2: Sai quy tắc chính tả tiếng Việt
     if (len >= 2) {
-        // q không đi với u (qa, qe...)
         if (raw[0] == L'q' && raw[1] != L'u') return true;
-        
-        // c không đi với i, e, ê, y
         if (raw[0] == L'c' && (raw[1] == L'i' || raw[1] == L'e' || raw[1] == L'\u00EA' || raw[1] == L'y')) return true;
-        
-        // k bắt buộc đi với h, i, e, ê, y
         if (raw[0] == L'k' && !(raw[1] == L'h' || raw[1] == L'i' || raw[1] == L'e' || raw[1] == L'\u00EA' || raw[1] == L'y')) return true;
-        
-        // g không đi với e, ê, y (gh thì hợp lệ, check ở dưới)
         if (raw[0] == L'g' && (raw[1] == L'e' || raw[1] == L'\u00EA' || raw[1] == L'y')) return true;
-        
-        // gh bắt buộc đi với i, e, ê, y
         if (len >= 3 && raw[0] == L'g' && raw[1] == L'h') {
             if (raw[2] != L'i' && raw[2] != L'e' && raw[2] != L'\u00EA' && raw[2] != L'y') return true;
         }
-
-        // ng không đi với i, e, ê, y
         if (len >= 3 && raw[0] == L'n' && raw[1] == L'g' && raw[2] != L'h') {
             if (raw[2] == L'i' || raw[2] == L'e' || raw[2] == L'\u00EA' || raw[2] == L'y') return true;
         }
-
-        // ngh bắt buộc đi với i, e, ê, y
         if (len >= 4 && raw[0] == L'n' && raw[1] == L'g' && raw[2] == L'h') {
             if (raw[3] != L'i' && raw[3] != L'e' && raw[3] != L'\u00EA' && raw[3] != L'y') return true;
         }
     }
 
-    // Heuristic an toàn: Gõ đến 5 ký tự mà chưa có nguyên âm nào thì chắc chắn là tiếng Anh/từ viết tắt
+    // LEVEL 2: Structural Validator
     bool hasVowel = false;
-    for (int i = 0; i < len; i++) {
-        if (CayData::IsVowel(raw[i])) { hasVowel = true; break; }
+    for (int i = 0; i < _textLen; i++) {
+        if (CayData::IsVowel(_text[i])) { hasVowel = true; break; }
     }
-    if (!hasVowel && len >= 5) return true;
+    
+    if (hasVowel) {
+        wchar_t textLo[MAX_BUFFER];
+        for (int i = 0; i < _textLen; i++) {
+            textLo[i] = ToLowerViet(CayData::StripTone(_text[i]));
+        }
+        textLo[_textLen] = L'\0';
+        
+        if (!IsCompleteSyllable(textLo, _textLen)) return true;
+    } else {
+        if (_textLen >= 5) return true;
+    }
 
     return false;
 }
