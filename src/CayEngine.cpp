@@ -727,11 +727,13 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
         if (_bufferCount > 0) CommitWord();
         else ResetFull();
         return;
+    }
 
-    case VK_LEFT: case VK_RIGHT: case VK_UP: case VK_DOWN:
-    case VK_HOME: case VK_END:  case VK_PRIOR: case VK_NEXT:
-    case VK_DELETE:
-        ResetFull();
+    // Reset state on Navigation or Enter/Tab keys to prevent buffer desync
+    if (e.keyCode == VK_RETURN || e.keyCode == VK_TAB || 
+       (e.keyCode >= VK_PRIOR && e.keyCode <= VK_DOWN)) { 
+        // VK_PRIOR (33) to VK_DOWN (40) covers PageUp, PageDown, End, Home, Left, Up, Right, Down
+        ResetState();
         return;
     }
 

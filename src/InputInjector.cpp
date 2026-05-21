@@ -42,33 +42,22 @@ static void FillVkInput(INPUT* inp, WORD vk, DWORD flags) {
 void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int newTextLen) {
     if (backspaceCount <= 0 && newTextLen <= 0) return;
 
-    // We MUST use the dummy to break RichText DOM bounds, which adds 1 to backspaces.
-    bool useDummy = (backspaceCount > 0);
-    int totalBs = backspaceCount + (useDummy ? 1 : 0);
-
-    // --- BATCH 1: DELETION (Dummy + Backspaces) ---
-    if (totalBs > 0) {
+    // BATCH 1: DELETION (Pure Backspaces, NO DUMMY)
+    if (backspaceCount > 0) {
         INPUT bsInputs[130]; 
         int bsIdx = 0;
-        
-        if (useDummy) {
-            FillUnicodeInput(&bsInputs[bsIdx++], L'\u200D', 0);
-            FillUnicodeInput(&bsInputs[bsIdx++], L'\u200D', KEYEVENTF_KEYUP);
-        }
-
-        for (int i = 0; i < totalBs && bsIdx + 1 < 130; i++) {
+        for (int i = 0; i < backspaceCount && bsIdx + 1 < 130; i++) {
             FillVkInput(&bsInputs[bsIdx++], VK_BACK, 0);
             FillVkInput(&bsInputs[bsIdx++], VK_BACK, KEYEVENTF_KEYUP);
         }
         SendInput((UINT)bsIdx, bsInputs, sizeof(INPUT));
     }
 
-    // --- BATCH 2: INSERTION (New Text) ---
+    // BATCH 2: INSERTION (New Text)
     if (newTextLen > 0) {
-        INPUT txtInputs[128];
+        INPUT txtInputs[130];
         int txtIdx = 0;
-        
-        for (int i = 0; i < newTextLen && txtIdx + 1 < 128; i++) {
+        for (int i = 0; i < newTextLen && txtIdx + 1 < 130; i++) {
             FillUnicodeInput(&txtInputs[txtIdx++], newText[i], 0);
             FillUnicodeInput(&txtInputs[txtIdx++], newText[i], KEYEVENTF_KEYUP);
         }
