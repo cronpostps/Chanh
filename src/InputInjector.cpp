@@ -44,29 +44,26 @@ void InputInjector::ReplaceText(int backspaceCount, const wchar_t* newText, int 
     if (backspaceCount < 0) backspaceCount = 0;
     if (newTextLen      < 0) newTextLen      = 0;
 
-    int totalBs = backspaceCount;
+    // CRITICAL FIX: The ZWJ dummy occupies one real character in the OS buffer.
+    // We must backspace over it in addition to the old text.
+    // This dummy wakes up the caret in Chrome Omnibox / Excel autocomplete.
+    int totalBs = backspaceCount + 1;
 
     // Total INPUT slots needed.
-    int total = (totalBs > 0 ? 4 : 0) // Left + Right arrow down/up
-              + totalBs * 2           // each BS needs keydown + keyup
-              + newTextLen * 2;       // each Unicode char needs keydown + keyup
+    int total = 2               // ZWJ down + up
+              + totalBs * 2     // each BS needs keydown + keyup
+              + newTextLen * 2; // each Unicode char needs keydown + keyup
 
     if (total > MAX_INPUTS) total = MAX_INPUTS; // hard clamp – should never happen
 
     INPUT inputs[MAX_INPUTS];
     int idx = 0;
 
-    // 1. Chrome/Excel autocomplete breaker: Left Arrow + Right Arrow
-    // This clears the highlighted prediction so that the subsequent backspaces 
-    // actually delete the typed character instead of just clearing the highlight.
-    if (totalBs > 0) {
-        FillVkInput(&inputs[idx++], VK_LEFT, 0);
-        FillVkInput(&inputs[idx++], VK_LEFT, KEYEVENTF_KEYUP);
-        FillVkInput(&inputs[idx++], VK_RIGHT, 0);
-        FillVkInput(&inputs[idx++], VK_RIGHT, KEYEVENTF_KEYUP);
-    }
+    // 1. Zero-Width Joiner dummy to wake up the target window caret.
+    FillUnicodeInput(&inputs[idx++], L'\u200D', 0);               // ZWJ down
+    FillUnicodeInput(&inputs[idx++], L'\u200D', KEYEVENTF_KEYUP); // ZWJ up
 
-    // 2. Backspaces – erase the old committed text.
+    // 2. Backspaces – erase the ZWJ + the old committed text.
     for (int i = 0; i < totalBs && idx + 1 < MAX_INPUTS; i++) {
         FillVkInput(&inputs[idx++], VK_BACK, 0);
         FillVkInput(&inputs[idx++], VK_BACK, KEYEVENTF_KEYUP);
