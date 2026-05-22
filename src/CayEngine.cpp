@@ -1,5 +1,6 @@
 #include "CayEngine.h"
-
+extern bool g_normalizeTone;
+extern bool g_shortcutW; // Thêm dòng này
 // ============================================================================
 // CayEngine.cpp  –  Free-style Telex state machine (RULE 3)
 //
@@ -156,18 +157,13 @@ void TelexEngine::Commit(int extraBs) {
 // Called when the engine decides the input is English.
 // ---------------------------------------------------------------------------
 void TelexEngine::FallbackToRaw() {
-    // Build raw ASCII string from _buffer.
-    wchar_t raw[MAX_BUFFER];
+    // Chỉ khôi phục lịch sử phím đến SÁT phím cuối cùng (_bufferCount - 1)
+    // Vì phím cuối cùng sẽ được tự động nối vào ở bước 6 của OnKeyDown!
     int rawLen = 0;
-    for (int i = 0; i < _bufferCount && rawLen < MAX_BUFFER - 1; i++) {
-        raw[rawLen++] = _buffer[i].raw;
+    for (int i = 0; i < _bufferCount - 1 && rawLen < MAX_BUFFER - 1; i++) {
+        _text[rawLen++] = _buffer[i].raw;
     }
-    raw[rawLen] = L'\0';
-
-    CayIME::InputInjector::ReplaceText(_textLen, raw, rawLen);
-
-    // Update _text to reflect the fallback.
-    for (int i = 0; i < rawLen; i++) _text[i] = raw[i];
+    _text[rawLen] = L'\0';
     _textLen = rawLen;
     _toneIndex = -1;
     _canRestore = false;
@@ -186,6 +182,7 @@ static bool IsCompleteSyllable(const wchar_t* s, int len) {
         L"b", L"c", L"d", L"g", L"h", L"k",
         L"l", L"m", L"n", L"p", L"r", L"s",
         L"t", L"v", L"x",
+        L"f", L"j", L"w", L"z",
         L"" // empty string = không có phụ âm đầu
     };
 
@@ -439,6 +436,46 @@ void TelexEngine::StripAllTones() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// NormalizeTone - Tự động lột dấu cũ và đặt lại vào đúng vị trí chuẩn
+// ---------------------------------------------------------------------------
+void TelexEngine::NormalizeTone() {
+    if (_textLen == 0) return;
+    
+    int currentTone = 0;
+    
+    // 1. Quét tìm và lột sạch các dấu thanh hiện có trong từ
+    for (int i = 0; i < _textLen; i++) {
+        wchar_t c = _text[i];
+        wchar_t base = CayData::StripTone(c);
+        if (base != c) {
+            for (int t = 1; t <= 5; t++) {
+                if (CayData::GetToneMark(base, t) == c || 
+                    CayData::GetToneMark(ToLowerViet(base), t) == ToLowerViet(c)) {
+                    currentTone = t;
+                    break;
+                }
+            }
+            _text[i] = base; // Trả về chữ không dấu (e.g. ụ -> u)
+        }
+    }
+
+    // 2. Nếu từ có dấu, tìm vị trí nguyên âm chuẩn nhất và cắm dấu lại
+    if (currentTone > 0) {
+        int targetPos = FindTonePosition();
+        if (targetPos >= 0) {
+            wchar_t base = _text[targetPos];
+            bool isUpper = (base == ToUpperViet(base) && base != ToLowerViet(base));
+            wchar_t baseLo = ToLowerViet(base);
+            
+            wchar_t tonedLo = CayData::GetToneMark(baseLo, currentTone);
+            if (tonedLo != L'\0') {
+                _text[targetPos] = isUpper ? ToUpperViet(tonedLo) : tonedLo;
+            }
+        }
+    }
+}
+
 bool TelexEngine::ApplyDoubleKeys(wchar_t key) {
     wchar_t loKey = ToLowerViet(key);
     if (loKey != L'a' && loKey != L'e' && loKey != L'o' && loKey != L'd') return false;
@@ -461,51 +498,56 @@ bool TelexEngine::ApplyDoubleKeys(wchar_t key) {
             wchar_t newBase = isUpper ? L'A' : L'a';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
- return true;
+            return true;
         }
         if (loKey == L'e' && loBase == L'\u00ea') {
             wchar_t newBase = isUpper ? L'E' : L'e';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
- return true;
+            return true;
         }
         if (loKey == L'o' && (loBase == L'\u00f4' || loBase == L'\u01a1')) {
             wchar_t newBase = isUpper ? L'O' : L'o';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
- return true;
+            return true;
         }
         if (loKey == L'd' && loBase == L'\u0111') {
             wchar_t newBase = isUpper ? L'D' : L'd';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
             if (_textLen < MAX_BUFFER - 1) { _text[_textLen++] = key; _text[_textLen] = L'\0'; }
- return true;
+            return true;
         }
 
         // 2. Apply logic
         if (loKey == L'a' && loBase == L'a') {
+            if (j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'a') return false; // Chống lặp aaa
             wchar_t newBase = isUpper ? L'\u00C2' : L'\u00E2';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
- return true;
+            return true;
         }
         if (loKey == L'e' && loBase == L'e') {
+            if (j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'e') return false; // Chống lặp eee
             wchar_t newBase = isUpper ? L'\u00CA' : L'\u00EA';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
- return true;
+            return true;
         }
         if (loKey == L'o' && loBase == L'o') {
+            if (j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'o') return false; // Chống lặp ooo (fix lỗi thoooi)
             wchar_t newBase = isUpper ? L'\u00D4' : L'\u00F4';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
- return true;
+            return true;
         }
         if (loKey == L'd' && loBase == L'd') {
+            if (j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'd') return false; // Chống lặp ddd
             wchar_t newBase = isUpper ? L'\u0110' : L'\u0111';
             _text[j] = tone ? CayData::GetToneMark(newBase, tone) : newBase;
- return true;
+            return true;
         }
         
+        // Bỏ qua phụ âm để tìm ngược về nguyên âm trước đó (sửa lỗi gõ xuyên phụ âm như góco -> gốc)
         if (!CayData::IsVowel(loBase) && loBase != L'd' && loBase != L'\u0111') {
-            break;
+            continue;
         }
     }
     return false;
@@ -529,6 +571,16 @@ bool TelexEngine::ApplyHookKeys(wchar_t key) {
 
         // 1. Undo logic
         if (loBase == L'\u0103' || loBase == L'\u01a1' || loBase == L'\u01b0') {
+            // --- BẢN VÁ HOÀN THIỆN LỖI WW -> UW ---
+            if (loBase == L'\u01b0' && _bufferCount >= 2 && ToLowerViet(_buffer[_bufferCount - 2].raw) == L'w') {
+                // Kiểm tra xem chữ 'ư' này có phải do 'u' + 'w' tạo ra không
+                bool isFromU = (_bufferCount >= 3 && ToLowerViet(_buffer[_bufferCount - 3].raw) == L'u');
+                if (!isFromU) {
+                    _text[j] = isUpper ? L'W' : L'w'; 
+                    return true;
+                }
+            }
+            // -----------------------------------------
             if (loBase == L'\u01a1' && j > 0 && ToLowerViet(CayData::StripTone(_text[j-1])) == L'\u01b0') {
                 wchar_t prevBase = CayData::StripTone(_text[j-1]);
                 bool prevUpper = (ToLowerViet(prevBase) != prevBase) || (prevBase >= L'A' && prevBase <= L'Z');
@@ -685,35 +737,14 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
     // -----------------------------------------------------------------------
     switch (vk) {
     case VK_BACK:
-        if (_bufferCount == 0 && _canRestore) {
-            // Restore state
-            _bufferCount = _savedBufferCount;
-            for (int i = 0; i < _bufferCount; i++) _buffer[i] = _savedBuffer[i];
-            
-            _textLen = _savedTextLen;
-            for (int i = 0; i < _textLen; i++) _text[i] = _savedText[i];
-            
-            _toneIndex = _savedToneIndex;
-            
-            // Sync output state with restored text (so UpdateScreen works properly on next keystroke)
-            _lastOutputLen = _savedTextLen;
-            for (int i = 0; i < _savedTextLen; i++) _lastOutput[i] = _savedText[i];
-            _lastOutput[_lastOutputLen] = L'\0';
-            
-            _canRestore = false;
-            // DO NOT set e.handled = true here. We let the OS physically delete the Space character.
-            return;
-        }
-
         if (_bufferCount > 0) {
-            e.handled = true; // suppress the raw backspace
+            e.handled = true; // Chặn phím Backspace gốc
             _canRestore = false;
-            // Remove last character from our text.
+            
             if (_textLen > 0) _textLen--;
             if (_bufferCount > 0) _bufferCount--;
             _text[_textLen] = L'\0';
 
-            // Re-derive tone index.
             _toneIndex = -1;
             for (int i = 0; i < _bufferCount; i++) {
                 int ti = CayData::GetToneIndex(_buffer[i].raw);
@@ -722,11 +753,13 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
 
             if (_bufferCount == 0) {
                 ResetState();
-                // Send one backspace to clear the last remaining displayed char.
                 CayIME::InputInjector::ReplaceText(1, nullptr, 0);
             } else {
-                UpdateScreen(_text, _textLen); // Automatically calculates and sends 1 Backspace
+                UpdateScreen(_text, _textLen);
             }
+        } else {
+            // NẾU BẤM BACKSPACE QUÁ TAY, RESET TOÀN BỘ ĐỂ CHỐNG DÍNH CHỮ
+            ResetFull(); 
         }
         return;
 
@@ -813,14 +846,33 @@ void TelexEngine::OnKeyDown(CayIME::InputHookManager* sender, CayIME::HookKeyEve
         }
     }
 
+    // Nếu bị xác định là tiếng Anh (bypass), nhưng trong chữ đang chứa dấu tiếng Việt -> Nhả dấu ngay!
+    if (bypass && CayData::HasVietnameseMark(_text, _textLen)) {
+        FallbackToRaw();
+    }
+
     // -----------------------------------------------------------------------
     // 6. Plain character – append to text buffer.
     // -----------------------------------------------------------------------
     if (!appliedModifier) {
+        
+        // --- THÊM LOGIC W = Ư Ở ĐÂY ---
+        // Nếu tùy chọn đang bật, đang không gõ tiếng Anh, và phím bấm là 'w'
+        if (g_shortcutW && !bypass && lo == L'w') {
+            ch = upper ? L'\u01AF' : L'\u01B0'; // Ép thành Ư hoặc ư
+        }
+        // ------------------------------
+
         if (_textLen < MAX_BUFFER - 1) {
             _text[_textLen++] = ch;
             _text[_textLen]   = L'\0';
         }
+    }
+
+    // --- THÊM ĐOẠN NÀY ĐỂ SỬA LỖI LỤÂN ---
+    // 6.5 Chuẩn hóa lại vị trí dấu sau mỗi thao tác gõ
+    if (!bypass && g_normalizeTone) {
+        NormalizeTone();
     }
 
     // -----------------------------------------------------------------------

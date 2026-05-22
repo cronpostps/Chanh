@@ -51,6 +51,9 @@ private:
     wchar_t _text[MAX_BUFFER];
     int     _textLen;
 
+    // Strip all tones and re-apply to the correct vowel
+    void NormalizeTone();
+
     // Current tone index (0–5) applied to this word, or -1 if none.
     int  _toneIndex;
 

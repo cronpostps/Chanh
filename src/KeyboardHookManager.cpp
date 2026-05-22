@@ -60,14 +60,21 @@ LRESULT CALLBACK InputHookManager::KbProc(int nCode, WPARAM wParam, LPARAM lPara
 
     DWORD vk = kb->vkCode;
 
-    // Translate VK to a Unicode character (best-effort, single char).
+    // Translate VK to a Unicode character (chuẩn xác cho mọi ký tự)
     wchar_t ch = 0;
-    if (vk >= 'A' && vk <= 'Z') {
-        // Simple ASCII mapping: shift to lowercase unless Shift is held.
-        bool shifted = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-        ch = shifted ? (wchar_t)vk : (wchar_t)(vk + 32);
-    } else if (vk >= '0' && vk <= '9') {
-        ch = (wchar_t)vk;
+    BYTE keyState[256];
+    GetKeyboardState(keyState);
+    
+    // Cập nhật thủ công trạng thái Shift/CapsLock để tránh lỗi trễ nhịp của Low-Level Hook
+    keyState[VK_SHIFT] = (GetKeyState(VK_SHIFT) & 0x8000) ? 0x80 : 0;
+    keyState[VK_CAPITAL] = (GetKeyState(VK_CAPITAL) & 0x0001) ? 0x01 : 0;
+
+    wchar_t buffer[4] = {0};
+    UINT scanCode = MapVirtualKeyW(vk, MAPVK_VK_TO_VSC);
+    
+    // Nhờ Windows dịch mã phím thành ký tự chính xác (bao gồm cả Shift + 0 -> ')')
+    if (ToUnicode(vk, scanCode, keyState, buffer, 4, 0) > 0) {
+        ch = buffer[0];
     }
 
     bool isDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);

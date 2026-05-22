@@ -6,17 +6,10 @@
 #include "CayEngine.h"
 #include "KeyboardHookManager.h"
 #include "InputInjector.h"
-
-#pragma comment(linker, "/NODEFAULTLIB")
-#pragma comment(linker, "/ENTRY:wWinMainCRTStartup")
-#pragma comment(linker, "/OPT:REF")
-#pragma comment(linker, "/OPT:ICF")
-#pragma comment(linker, "/MERGE:.rdata=.text")
-#pragma comment(linker, "/MERGE:.pdata=.text")
-#pragma comment(lib, "kernel32.lib")
-#pragma comment(lib, "user32.lib")
-#pragma comment(lib, "shell32.lib")
-#pragma comment(lib, "advapi32.lib")
+#include "MacroManager.h"
+#include "SettingsUI.h"
+bool g_normalizeTone = true; // Đổi thành true để mặc định bật
+bool g_shortcutW = true;     // Thêm biến mới: mặc định bật w = ư
 
 #define WM_TRAYICON (WM_USER + 1)
 
@@ -124,7 +117,7 @@ void ShowContextMenu(POINT pt) {
     HMENU hMenu = CreatePopupMenu();
     AppendMenuW(hMenu, MF_STRING | (IsAutoStart() ? MF_CHECKED : MF_UNCHECKED), IDM_AUTOSTART, L"T\x1EF1 kh\x1EDFi \x0111\x1ED9ng");
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(hMenu, MF_STRING, IDM_ABOUT, L"Th\x00F4ng tin");
+    AppendMenuW(hMenu, MF_STRING, IDM_ABOUT, L"G\u00e1n ph\u00edm"); // Chữ "Gán phím" mã hóa Unicode
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hMenu, MF_STRING, IDM_EXIT, L"Tho\x00E1t");
 
@@ -149,12 +142,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         case IDM_TOGGLE: Toggle(); break;
         case IDM_AUTOSTART: ToggleAutoStart(); break;
         case IDM_ABOUT:
-            MessageBoxW(hWnd, 
-                L"Cay \u2013 B\u1ed9 g\u00f5 ti\u1ebfng Vi\u1ec7t Telex v1.0\n\n"
-                L"Ctrl+Shift = B\u1eadt / T\u1eaft\n\n"
-                L"aa\u2192\u00e2  aw\u2192\u0103  dd\u2192\u0111  ee\u2192\u00ea  oo\u2192\u00f4  ow\u2192\u01a1  uw\u2192\u01b0\n"
-                L"s=s\u1eafc  f=huy\u1ec1n  r=h\u1ecfi  x=ng\u00e3  j=n\u1eb7ng",
-                L"Gi\u1edbi thi\u1ec7u", MB_OK | MB_ICONINFORMATION);
+            ShowSettingsUI();
             break;
         case IDM_EXIT:
             PostQuitMessage(0);
@@ -174,7 +162,9 @@ void OnKeyDownHook(CayIME::InputHookManager* sender, CayIME::HookKeyEventArgs& e
     if (e.extraInfo == CayIME::InputInjector::MAGIC_EXTRA_INFO) return;
 
     if (e.keyCode == VK_LCONTROL || e.keyCode == VK_RCONTROL) {
-        g_ctrl = true; g_engine.ResetFull(); return;
+        g_ctrl = true; 
+        // Bỏ lệnh ResetFull() ở đây để RAM không bị xóa mất, phục vụ cho Ctrl + Z
+        return;
     }
     if (e.keyCode == VK_LWIN || e.keyCode == VK_RWIN) {
         g_win = true; g_engine.ResetFull(); return;
@@ -187,8 +177,27 @@ void OnKeyDownHook(CayIME::InputHookManager* sender, CayIME::HookKeyEventArgs& e
         g_pendingToggle = true; return;
     }
 
-    if (g_ctrl || g_win || g_alt) return;
+    if (g_ctrl || g_win || g_alt) {
+        g_engine.ResetFull(); // Các tổ hợp phím tắt khác thì reset bộ gõ
+        return;
+    }
     if (!g_enabled) return;
+
+    // --- BẮT ĐẦU ĐOẠN CODE MACRO THÊM MỚI ---
+    // Khi gõ các phím ngắt chữ (cách, enter, mũi tên, xóa...), ta reset bộ đệm macro
+    if (e.keyCode == VK_SPACE || e.keyCode == VK_RETURN || e.keyCode == VK_BACK || 
+       (e.keyCode >= VK_PRIOR && e.keyCode <= VK_DOWN)) {
+        MacroManager::GetInstance().ResetBuffer();
+    }
+    // Nếu gõ ký tự bình thường, đưa vào kiểm tra macro
+    else if (e.character != 0) {
+        if (MacroManager::GetInstance().ProcessChar(e.character)) {
+            e.handled = true;      // Chặn không in phím cuối cùng ra màn hình
+            g_engine.ResetFull();  // Báo cho bộ gõ Telex ngừng dính chữ cũ
+            return;                // Kết thúc, không đưa phím này cho Telex nữa
+        }
+    }
+    // --- KẾT THÚC ĐOẠN CODE MACRO ---
 
     g_engine.OnKeyDown(nullptr, e);
 }
