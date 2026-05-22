@@ -11,7 +11,7 @@ Bộ gõ Telex siêu nhẹ, "plug-and-play" dành cho anh em developer hệ tố
 
 ---
 
-## ✨ Features (Tính năng "ăn tiền")
+## ✨ Tính năng "ăn tiền"
 
 - **Siêu nhẹ & Sạch sẽ:** File thực thi chỉ vỏn vẹn ~22KB. Chạy độc lập, không phụ thuộc thư viện rườm rà, ngốn RAM gần như bằng 0.
 - **Không lỗi vặt:** Đã fix triệt để các bệnh nan y như lỗi nuốt chữ, nhảy nháy khi gõ trên thanh địa chỉ Chrome, thanh tìm kiếm VSCode hay GitHub/CodeMirror.
