@@ -16,6 +16,13 @@ FodyWeavers.xsd
 # Reference DLLs (using NuGet instead)
 *.dll
 
+# Bỏ qua file thực thi và file nhị phân
+*.exe
+*.obj
+*.pdb
+*.lib
+*.bat
+
 # NuGet
 *.nupkg
 packages/
