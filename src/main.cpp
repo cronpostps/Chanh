@@ -26,7 +26,7 @@ CayIME::InputHookManager* g_hookManager = nullptr;
 bool g_enabled = true;
 HICON g_iconOn = nullptr;
 HICON g_iconOff = nullptr;
-bool g_ctrl = false, g_win = false, g_alt = false, g_pendingToggle = false;
+bool g_pendingToggle = false;
 
 HICON CreateTrayIcon(COLORREF color) {
     int width = GetSystemMetrics(SM_CXSMICON);
@@ -161,39 +161,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 void OnKeyDownHook(CayIME::InputHookManager* sender, CayIME::HookKeyEventArgs& e) {
     if (e.extraInfo == CayIME::InputInjector::MAGIC_EXTRA_INFO) return;
 
-    if (e.keyCode == VK_LCONTROL || e.keyCode == VK_RCONTROL) {
-        g_ctrl = true;
+    // 1. Lấy trạng thái vật lý tức thời của các phím Modifier từ phần cứng
+    bool isCtrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+    bool isAlt  = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+    bool isWin  = (GetAsyncKeyState(VK_LWIN) & 0x8000) != 0 || (GetAsyncKeyState(VK_RWIN) & 0x8000) != 0;
+
+    // 2. Tổ hợp bật/tắt bộ gõ (Ctrl + Shift)
+    if (isCtrl && (e.keyCode == VK_LSHIFT || e.keyCode == VK_RSHIFT || e.keyCode == VK_SHIFT)) {
+        g_pendingToggle = true; 
         return;
     }
-    if (e.keyCode == VK_LWIN || e.keyCode == VK_RWIN) {
-        g_win = true; g_engine.ResetFull(); return;
-    }
-    if (e.keyCode == VK_LMENU || e.keyCode == VK_RMENU) {
-        g_alt = true; g_engine.ResetFull(); return;
+
+    // 3. NẾU ĐANG GIỮ CTRL, ALT, WIN -> CHẮC CHẮN LÀ PHÍM TẮT
+    if (isCtrl || isAlt || isWin) {
+        g_engine.ResetFull(); // Dọn dẹp RAM bộ gõ để từ tiếp theo không bị dính
+        return; // Trả về ngay, tuyệt đối không nuốt phím để VS Code, Word tự xử lý!
     }
 
-    if (g_ctrl && (e.keyCode == VK_LSHIFT || e.keyCode == VK_RSHIFT)) {
-        g_pendingToggle = true; return;
-    }
-
-    if (g_ctrl || g_win || g_alt) {
-        g_engine.ResetFull(); // Các tổ hợp phím tắt khác thì reset bộ gõ
+    // 4. Các phím Modifier tự nó bấm xuống cũng bỏ qua
+    if (e.keyCode == VK_LCONTROL || e.keyCode == VK_RCONTROL || e.keyCode == VK_CONTROL ||
+        e.keyCode == VK_LMENU || e.keyCode == VK_RMENU || e.keyCode == VK_MENU ||
+        e.keyCode == VK_LWIN || e.keyCode == VK_RWIN) {
+        g_engine.ResetFull();
         return;
     }
+
     if (!g_enabled) return;
 
-    // --- BẮT ĐẦU ĐOẠN CODE MACRO THÊM MỚI ---
-    // Khi gõ các phím ngắt chữ (cách, enter, mũi tên, xóa...), ta reset bộ đệm macro
+    // --- BẮT ĐẦU ĐOẠN CODE MACRO ---
     if (e.keyCode == VK_SPACE || e.keyCode == VK_RETURN || e.keyCode == VK_BACK || 
        (e.keyCode >= VK_PRIOR && e.keyCode <= VK_DOWN)) {
         MacroManager::GetInstance().ResetBuffer();
     }
-    // Nếu gõ ký tự bình thường, đưa vào kiểm tra macro
     else if (e.character != 0) {
         if (MacroManager::GetInstance().ProcessChar(e.character)) {
-            e.handled = true;      // Chặn không in phím cuối cùng ra màn hình
-            g_engine.ResetFull();  // Báo cho bộ gõ Telex ngừng dính chữ cũ
-            return;                // Kết thúc, không đưa phím này cho Telex nữa
+            e.handled = true;      
+            g_engine.ResetFull();  
+            return;                
         }
     }
     // --- KẾT THÚC ĐOẠN CODE MACRO ---
@@ -204,16 +208,19 @@ void OnKeyDownHook(CayIME::InputHookManager* sender, CayIME::HookKeyEventArgs& e
 void OnKeyUpHook(CayIME::InputHookManager* sender, CayIME::HookKeyEventArgs& e) {
     if (e.extraInfo == CayIME::InputInjector::MAGIC_EXTRA_INFO) return;
 
-    if (e.keyCode == VK_LCONTROL || e.keyCode == VK_RCONTROL) {
-        g_ctrl = false; 
-        if (g_pendingToggle) { g_pendingToggle = false; Toggle(); } 
+    // Xử lý bật/tắt bộ gõ khi nhả phím
+    if (e.keyCode == VK_LCONTROL || e.keyCode == VK_RCONTROL || e.keyCode == VK_CONTROL) {
+        if (g_pendingToggle) { 
+            g_pendingToggle = false; 
+            Toggle(); 
+        } 
         return;
     }
-    if (e.keyCode == VK_LWIN || e.keyCode == VK_RWIN) { g_win = false; return; }
-    if (e.keyCode == VK_LMENU || e.keyCode == VK_RMENU) { g_alt = false; return; }
     
-    if (g_pendingToggle && (e.keyCode == VK_LSHIFT || e.keyCode == VK_RSHIFT)) {
-        g_pendingToggle = false; Toggle(); return;
+    if (g_pendingToggle && (e.keyCode == VK_LSHIFT || e.keyCode == VK_RSHIFT || e.keyCode == VK_SHIFT)) {
+        g_pendingToggle = false; 
+        Toggle(); 
+        return;
     }
 
     if (!g_enabled) return;
