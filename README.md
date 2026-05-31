@@ -53,7 +53,15 @@ cmake --build build --config Release
 
 5. Phím tắt Bật/Tắt nhanh: Ctrl + Shift.
 
+## 👤 Tác giả
+
+**Nguyễn Ngọc Anh**
+ ➤ **Telegram:** [t.me/anhnn83](https://t.me/anhnn83)
+ ✉ **Email:** [anhnn@dgd.vn](mailto:anhnn@dgd.vn)
+
 ## 📜 License
-[GPL-3.0 License](LICENSE) 
+
+Dự án này được cấp phép theo các điều khoản của [GNU General Public License v3.0](LICENSE). Tất cả các tệp mã nguồn trong kho lưu trữ này đều thuộc phạm vi áp dụng của giấy phép này trừ khi có tuyên bố khác.
+
 - Mã nguồn gốc © [Cay by tctvn](https://github.com/tctvn/cay)
 - Mã nguồn độ © [Chanh by anhnn](https://github.com/cronpostps/chanh)
