@@ -22,7 +22,7 @@ Chúng tôi xin gửi lời cảm ơn chân thành đến tác giả của **Cay
 ## ✨ Tính năng "ăn tiền" của Chanh
 
 - **Siêu nhẹ & Tối ưu hóa (Zero-Bloat):** File thực thi chỉ khoảng ~265KB. Được build với cờ tối ưu hóa cấp cao nhất của MSVC (`/O2`, `/OPT:ICF`), không phụ thuộc thư viện bên thứ ba, ngốn RAM gần như bằng 0.
-- **Ngủ đông thông minh (App Bypass):** Tự động phát hiện và nhường lại quyền điều khiển bàn phím khi bạn mở các ứng dụng/game trong danh sách Bypass (CS:GO, LoL, Dota 2, Valorant...). Tạm biệt nỗi lo kẹt phím khi tung skill!
+- **Ngủ đông thông minh (App Bypass):** Tự động phát hiện và nhường lại quyền điều khiển bàn phím khi bạn mở các ứng dụng/game trong danh sách Bypass (CS:GO, LoL, Dota 2, Valorant...Lưu ý nhớ nhập đúng file thực thi tiến trình (.exe) khi thêm vào danh sách). Tha hồ vừa chat vừa chơi game!
 - **Gõ tắt (Macro):** Hỗ trợ thiết lập các từ gõ tắt cá nhân hóa, giúp tăng tốc độ gõ văn bản và code.
 - **Giao diện "Pro":** Bổ sung cửa sổ thiết lập UI hiện đại, quản lý danh sách Gõ tắt và Ngủ đông trực quan, lưu trữ dữ liệu tự động.
 - **Khắc phục triệt để lỗi trình duyệt:** Sử dụng kỹ thuật tiêm phím ảo đột phá, giải quyết dứt điểm 100% lỗi nuốt chữ, nhảy nháy khi gõ trên thanh địa chỉ Chrome, Edge hay VSCode...
