@@ -1,7 +1,7 @@
 # 🍋‍🟩 Chanh — Bộ gõ Telex Tiếng Việt Tối Giản & Mạnh Mẽ
 
 [![Platform](https://img.shields.io/badge/Platform-Windows-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](#)
-[![Language](https://img.shields.io/badge/Language-C%20++-3776AB?style=for-the-badge&logo=python&logoColor=white)](#)
+[![Language](https://img.shields.io/badge/Language-C++-3776AB?style=for-the-badge&logo=python&logoColor=white)](#)
 
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/cronpostps/chanh)
 [![Latest Version](https://img.shields.io/badge/-Latest%20Version-blue?style=for-the-badge)](https://github.com/cronpostps/chanh/releases/download/latest/ChanhEngine_latest.zip)
