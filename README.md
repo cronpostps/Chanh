@@ -66,5 +66,5 @@ cmake --build build --config Release
 <hr>
 <div align="center">
   &copy; 2026 <a href="https://github.com/cronpostps">anhnn</a>. Mọi quyền được bảo lưu.<br>
-  <b>Chanh Telex</b> được phát hành dưới giấy phép <a href="LICENSE">GNU GPLv3</a>.
+  <b>Chanh</b> được phát hành dưới giấy phép <a href="LICENSE">GNU GPLv3</a>.
 </div>
