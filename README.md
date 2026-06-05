@@ -65,3 +65,5 @@ Dự án này được cấp phép theo các điều khoản của [GNU General 
 
 - Mã nguồn gốc © [Cay by tctvn](https://github.com/tctvn/cay)
 - Mã nguồn độ © [Chanh by anhnn](https://github.com/cronpostps/chanh)
+
+Xem thêm các dự án do [anhnn](https://t.me/anhnn83) dev tại [anhnn.cronpost.com](https://anhnn.cronpost.com)
