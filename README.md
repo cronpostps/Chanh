@@ -3,8 +3,8 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](#)
 [![Language](https://img.shields.io/badge/Language-C++-3776AB?style=for-the-badge&logo=python&logoColor=white)](#)
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/cronpostps/chanh)
-[![Latest Version](https://img.shields.io/badge/-Latest%20Version-blue?style=for-the-badge)](https://github.com/cronpostps/chanh/releases/download/latest/ChanhEngine_latest.zip)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/anhnn83/chanh)
+[![Latest Version](https://img.shields.io/badge/-Latest%20Version-blue?style=for-the-badge)](https://github.com/anhnn83/chanh/releases/download/latest/ChanhEngine_latest.zip)
 
 
 > **Chanh Telex** là một bộ gõ Telex siêu nhẹ, "plug-and-play" dành cho anh em developer và game thủ. Không bloatware, không quảng cáo, bật lên là gõ với trải nghiệm mượt mà, được thiết kế để hạn chế tối đa việc phá hỏng code, gõ nhầm lệnh hay giật lag khi chơi game.
@@ -65,6 +65,6 @@ cmake --build build --config Release
 
 <hr>
 <div align="center">
-  &copy; 2026 <a href="https://github.com/cronpostps">anhnn</a>. Mọi quyền được bảo lưu.<br>
+  &copy; 2026 <a href="https://github.com/anhnn83">anhnn</a>. Mọi quyền được bảo lưu.<br>
   <b>Chanh</b> được phát hành dưới giấy phép <a href="LICENSE">GNU GPLv3</a>.
 </div>
