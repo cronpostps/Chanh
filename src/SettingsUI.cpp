@@ -62,7 +62,7 @@ LRESULT CALLBACK SettingsWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
             SendMessage(hChkW, BM_SETCHECK, g_shortcutW ? BST_CHECKED : BST_UNCHECKED, 0);
 
             // Label thông tin tác giả (Góc phải dưới, căn lề phải)
-            CreateWindowExW(0, L"STATIC", L"Chanh v1.0 : B\u1ed9 g\u00f5 Telex Unicode\nby anhnn@dgd.vn", 
+            CreateWindowExW(0, L"STATIC", L"Chanh v1.1 : B\u1ed9 g\u00f5 Telex Unicode\nby anhnn@dgd.vn", 
                             WS_CHILD | WS_VISIBLE | SS_RIGHT, 400, 300, 375, 40, hWnd, NULL, NULL, NULL);
 
             // Áp dụng Font Segoe UI cho toàn bộ các control con

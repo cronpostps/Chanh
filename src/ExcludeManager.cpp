@@ -1,5 +1,6 @@
 #include "ExcludeManager.h"
 #include <fstream>
+#include <windows.h>
 
 static std::wstring Utf8ToW(const std::string& str) {
     if (str.empty()) return L"";
@@ -53,12 +54,24 @@ void ExcludeManager::LoadFromFile() {
 }
 
 void ExcludeManager::SaveToFile() {
-    std::ofstream file(m_filePath, std::ios::binary);
-    if (!file.is_open()) return;
-    for (const auto& app : m_excluded) {
-        std::string line = WToUtf8(app) + "\n";
-        file.write(line.c_str(), line.size());
+    int retries = 3;
+    while (retries > 0) {
+        // Ép mở file để ghi lại từ đầu (trunc), tránh lỗi ghi đè rác
+        std::ofstream file(m_filePath, std::ios::out | std::ios::trunc | std::ios::binary);
+        if (file.is_open()) {
+            for (const auto& app : m_excluded) {
+                std::string line = WToUtf8(app) + "\r\n"; // Chuẩn hóa xuống dòng Windows
+                file.write(line.c_str(), line.size());
+            }
+            file.flush();
+            file.close();
+            return; // Ghi thành công thì thoát
+        }
+        Sleep(100); // Nếu file bị khóa (bởi Antivirus/OneDrive), đợi 100ms rồi thử lại
+        retries--;
     }
+    // Báo lỗi nếu đã cố thử 3 lần mà vẫn bị chặn
+    MessageBoxW(NULL, L"L\u1ed7i: Kh\u00f4ng th\u1ec3 ghi file chanh_exclude.txt! Vui l\u00f2ng \u0111\u00f3ng c\u00e1c ph\u1ea7n m\u1ec1m kh\u00e1c \u0111ang m\u1edf file n\u00e0y.", L"Chanh - C\u1ea3nh b\u00e1o", MB_OK | MB_ICONWARNING);
 }
 
 bool ExcludeManager::IsExcluded(const std::wstring& exeName) {
